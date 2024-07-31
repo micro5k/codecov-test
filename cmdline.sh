@@ -33,8 +33,20 @@ if test "${A5K_FUNCTIONS_INCLUDED:-false}" = 'false'; then
 
   unset STARTED_FROM_BATCH_FILE
   unset IS_PATH_INITIALIZED
-  export DO_INIT_CMDLINE=1
+  unset QUOTED_PARAMS
+  if test "${#}" -gt 0; then
+    case "${*}" in
+      *"'"*)
+        printf 'WARNING: Single quote found, parameters dropped\n'
+        ;;
+      *)
+        QUOTED_PARAMS="$(printf " '%s'" "${@}")"
+        export QUOTED_PARAMS
+        ;;
+    esac
+  fi
 
+  export DO_INIT_CMDLINE=1
   if test -n "${MAIN_DIR-}"; then
     exec bash --init-file "${MAIN_DIR:?}/includes/common.sh"
   else
