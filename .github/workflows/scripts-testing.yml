@@ -35,6 +35,10 @@ jobs:
         shell: bash
         run: |
           # Testing scripts...
+          find /usr/bin -samefile /usr/bin/sh || echo $?
+          printf '%s\n' '---'
+          find /bin -samefile /bin/sh || echo $?
+          printf '%s\n' '---'
           # shellcheck disable=SC2016 # Intended: Expressions don't expand in single quotes
           readonly current_os='${{ matrix.os }}'; readonly workspace_dir='${{ github.workspace }}'
           if command 1> /dev/null -v 'apt-get'; then sudo apt-get -y -qq install 'mksh' 'yash' 'posh' 1> /dev/null; fi
