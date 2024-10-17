@@ -8,11 +8,8 @@
 set -u 2> /dev/null || :
 setopt SH_WORD_SPLIT 2> /dev/null || :
 
-POSIXLY_CORRECT='y'
-export POSIXLY_CORRECT
-
 # shellcheck disable=all
-$(set -o pipefail 1> /dev/null 2>&1) && set -o pipefail || :
+#$(set -o pipefail 1> /dev/null 2>&1) && set -o pipefail || :
 
 readonly SCRIPT_NAME='Bits info'
 readonly SCRIPT_VERSION='1.3'
@@ -22,8 +19,10 @@ command 1> /dev/null 2>&1 -v 'local' || {
   if command 1> /dev/null 2>&1 -v 'typeset'; then alias 'local'='typeset'; fi # On some variants of ksh this really works, but leave the function as dummy fallback
 }
 
+POSIXLY_CORRECT='y'
 NL='
 '
+export POSIXLY_CORRECT NL
 
 convert_max_signed_int_to_bit()
 {
