@@ -14,6 +14,8 @@ setopt SH_WORD_SPLIT 2> /dev/null || :
 SCRIPT_NAME='Bits info'
 SCRIPT_VERSION='1.3'
 
+_shell_version="$(\eval 2> /dev/null ' \echo "${.sh.version-}" ' || :)" && test -n "${_shell_version}" && echo "${_shell_version}" || echo 'fail'
+
 command 1> /dev/null 2>&1 -v 'local' || {
   \eval ' local() { :; } ' || :                                               # Create a dummy "local" function for shells without support for local (example: ksh)
   if command 1> /dev/null 2>&1 -v 'typeset'; then alias 'local'='typeset'; fi # On some variants of ksh this really works, but leave the function as dummy fallback
