@@ -11,8 +11,8 @@ setopt SH_WORD_SPLIT 2> /dev/null || :
 # shellcheck disable=all
 #$(set -o pipefail 1> /dev/null 2>&1) && set -o pipefail || :
 
-readonly SCRIPT_NAME='Bits info'
-readonly SCRIPT_VERSION='1.3'
+SCRIPT_NAME='Bits info'
+SCRIPT_VERSION='1.3'
 
 command 1> /dev/null 2>&1 -v 'local' || {
   \eval ' local() { :; } ' || :                                               # Create a dummy "local" function for shells without support for local (example: ksh)
