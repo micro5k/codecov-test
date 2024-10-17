@@ -7,7 +7,9 @@
 
 set -u 2> /dev/null || :
 setopt SH_WORD_SPLIT 2> /dev/null || :
-export POSIXLY_CORRECT='y'
+
+POSIXLY_CORRECT='y'
+export POSIXLY_CORRECT
 
 # shellcheck disable=all
 $(set -o pipefail 1> /dev/null 2>&1) && set -o pipefail || :
