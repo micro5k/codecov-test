@@ -38,15 +38,16 @@ command 1> /dev/null 2>&1 -v 'local' || {
 
 ### GLOBAL VARIABLES ###
 
+readlink "/proc/$$/exe" | grep 'obosh' && set -x || :
 echo '---'
 test -e '/usr/bin/uname' && echo ok || echo fail
 echo '---'
-aaa="$(/usr/bin/uname 2> /dev/null -o)" || :
-test "${aaa}" = 'Msys' && echo ok || echo fail
+#aaa="$(/usr/bin/uname 2> /dev/null -o)" || :
+#test "${aaa}" = 'Msys' && echo ok || echo fail
 echo '---'
-test "$('/usr/bin/uname' 2> /dev/null -o || :)" = 'Msys' && echo ok || echo fail
+#test "$('/usr/bin/uname' 2> /dev/null -o || :)" = 'Msys' && echo ok || echo fail
 echo '---'
-test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys' && echo ok || echo fail
+#test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys' && echo ok || echo fail
 echo '---'
 
 POSIXLY_CORRECT='y'
