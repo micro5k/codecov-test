@@ -8,6 +8,8 @@
 SCRIPT_NAME='Bits info'
 SCRIPT_VERSION='1.4'
 
+readlink "/proc/$$/exe" | grep 'obosh' && set -x || :
+
 set -u 2> /dev/null || :
 # shellcheck disable=SC3040 # Ignore: In POSIX sh, set option pipefail is undefined
 case "$(set -o || :)" in *'pipefail'*) set -o pipefail ;; *) ;; esac
@@ -160,7 +162,7 @@ hex_bytes_to_int()
 compare_hex_bytes()
 {
   test "${3}" -gt 0 || return 1
-  test "$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))" || :)" = "${4}"
+  #test "$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))" || :)" = "${4}"
 }
 
 # Params:
@@ -181,7 +183,7 @@ extract_bytes()
 extract_bytes_and_swap()
 {
   test "${3}" -gt 0 || return 1
-  _ebas_bytes="$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))")" || return 2
+  #_ebas_bytes="$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))")" || return 2
 
   if test "${4-}" = 'true'; then
     if test "${3}" = 4; then
@@ -889,7 +891,7 @@ main()
   done
   _shell_arithmetic_bit="$(convert_max_signed_int_to_bit "${_max}")" || _shell_arithmetic_bit='unknown'
 
-  _shell_printf_bit="$(convert_max_unsigned_int_to_bit "$(get_max_unsigned_int_of_shell_printf || :)")" || _shell_printf_bit='unknown'
+  _shell_printf_bit='' #"$(convert_max_unsigned_int_to_bit "$(get_max_unsigned_int_of_shell_printf || :)")" || _shell_printf_bit='unknown'
 
   _awk_printf_bit="$(convert_max_unsigned_int_to_bit "$(awk -- 'BEGIN { printf "%u\n", "-1" }' || :)")" || _awk_printf_bit='unknown'
 
