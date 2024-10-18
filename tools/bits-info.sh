@@ -819,6 +819,10 @@ main()
   _limits_date='32767 2147480047 2147483647 32535215999 32535244799 67767976233529199 67767976233532799 67768036191673199 67768036191676799 9223372036854775807'
   _limits_u='65535 2147483647 2147483648 4294967295 18446744073709551615'
 
+echo "$(get_shell_exe)"
+echo "$(get_shell_exe || :)"
+echo "`get_shell_exe`"
+
   shell_exe="$(get_shell_exe || :)"
   if test "$(uname 2> /dev/null -o || :)" = 'Msys' && command 1> /dev/null 2>&1 -v 'cygpath'; then shell_exe="$(cygpath -m -a -l -- "${shell_exe}" || :)"; fi
   shell_info="$(get_shell_info "${shell_exe}" || :)"
