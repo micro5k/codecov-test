@@ -15,7 +15,7 @@ set -u 2> /dev/null || :
 case "$(set 2> /dev/null +o || set || :)" in *'o pipefail'*) echo 'ok'; set -o pipefail || printf 1>&2 '%s\n' 'Failed: pipefail' ;; *) ;; esac
 
 echo '---'
-set +o | grep pipefail || set +o
+set +o | grep pipefail || { set +o; set -o; }
 echo '---'
 
 # The "obosh" shell does NOT support "command" while the "posh" shell does NOT support "type"
