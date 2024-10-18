@@ -41,6 +41,11 @@ command 1> /dev/null 2>&1 -v 'local' || {
 echo '---'
 test -e '/usr/bin/uname' && echo ok || echo fail
 echo '---'
+aaa="$(/usr/bin/uname 2> /dev/null -o)" || :
+test "${aaa}" = 'Msys' && echo ok || echo fail
+echo '---'
+test "$('/usr/bin/uname' 2> /dev/null -o || :)" = 'Msys' && echo ok || echo fail
+echo '---'
 test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys' && echo ok || echo fail
 echo '---'
 
