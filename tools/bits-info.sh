@@ -180,7 +180,7 @@ hex_bytes_to_int()
 compare_hex_bytes()
 {
   test "${3}" -gt 0 || return 1
-  test "$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))" || :)" = "${4}"
+  #test "$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))" || :)" = "${4}"
 }
 
 # Params:
@@ -190,7 +190,7 @@ compare_hex_bytes()
 extract_bytes()
 {
   test "${3}" -gt 0 || return 1
-  printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))"
+  #printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))"
 }
 
 # Params:
