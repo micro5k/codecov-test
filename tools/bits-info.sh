@@ -966,13 +966,6 @@ echo '---'
   printf '%s\n' "Bits of shell arithmetic: ${_shell_arithmetic_bit}"
   printf '%s\n\n' "Bits of shell 'printf': ${_shell_printf_bit}"
 
-echo '---'
-tmp_var="$(printf '%u\n' '-1')" 2> /dev/null || :
-echo '---'
-echo '---'
-printf '%u\n' '-1' 2> /dev/null || :
-echo '---'
-
   printf '%s %s\n' "Version of awk:" "$(get_version 'awk' || :)"
   printf '%s\n' "Bits of awk 'printf': ${_awk_printf_bit}"
   printf '%s\n' "Bits of awk 'printf' - signed: ${_awk_printf_signed_bit}"
