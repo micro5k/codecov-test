@@ -11,20 +11,23 @@ SCRIPT_VERSION='1.4'
 #readlink "/proc/$$/exe" | grep 'obosh' && set -x || :
 
 echo '==='
+command 1> /dev/null 2>&1 -v 'command' && echo 'OK: command' ||  echo 'FAIL: command'
+command 1> /dev/null 2>&1 -v 'command' || command() { test "${1-}" = '-v' || exit 255; shift; type "${@}"; }
+
+echo '==='
+command 1> /dev/null 2>&1 -v 'type' && echo 'OK: type' ||  echo 'FAIL: type'
+
+echo '==='
 abc_f() { local abc && echo 'OK: local' || echo 'Failed: local'; }
 abc_f
 
 echo '---'
 command 1> /dev/null -v 'local' && echo 'OK: local' || echo 'Failed: local'
-type 1> /dev/null 'local' && echo 'OK: local' || echo 'Failed: local'
+type 1> /dev/null 2>&1 'local' && echo 'OK: local' || echo 'Failed: local'
 
-echo '---'
+echo '==='
 command 1> /dev/null -v 'setopt' && echo 'OK: setopt' || echo 'Failed: setopt'
-type 1> /dev/null 'setopt' && echo 'OK: setopt' || echo 'Failed: setopt'
-
-echo '---'
-command 1> /dev/null 2>&1 -v 'command' && echo 'OK: command' ||  echo 'FAIL: command'
-command 1> /dev/null 2>&1 -v 'command' || command() { test "${1-}" = '-v' || exit 255; shift; type "${@}"; }
+type 1> /dev/null 2>&1 'setopt' && echo 'OK: setopt' || echo 'Failed: setopt'
 
 echo '==='
 set -u 2> /dev/null || :
