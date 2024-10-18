@@ -8,14 +8,19 @@
 SCRIPT_NAME='Bits info'
 SCRIPT_VERSION='1.4'
 
-#readlink "/proc/$$/exe" | grep 'obosh' && set -x || :
+### CONFIGURATION ###
 
-echo '==='
-command 1> /dev/null 2>&1 -v 'command' && echo 'OK: command' ||  echo 'FAIL: command'
-command 1> /dev/null 2>&1 -v 'command' || command() { test "${1-}" = '-v' || exit 255; shift; type "${@}"; }
+set -u 2> /dev/null || :
+# shellcheck disable=SC3040 # Ignore: In POSIX sh, set option pipefail is undefined
+case "$(set -o || :)" in *'pipefail'*) set -o pipefail || printf 1>&2 '%s\n' 'Failed: pipefail' ;; *) ;; esac
 
-echo '==='
-command 1> /dev/null 2>&1 -v 'type' && echo 'OK: type' ||  echo 'FAIL: type'
+# The "obosh" shell does NOT support "command" while the "posh" shell does NOT support "type"
+command 1> /dev/null 2>&1 -v 'command' || command()
+{
+  test "${1-}" = '-v' || exit 255
+  shift
+  type "${@}"
+}
 
 echo '==='
 abc_f() { local abc && echo 'OK: local' || echo 'Failed: local'; }
@@ -30,22 +35,29 @@ command 1> /dev/null -v 'setopt' && echo 'OK: setopt' || echo 'Failed: setopt'
 type 1> /dev/null 2>&1 'setopt' && echo 'OK: setopt' || echo 'Failed: setopt'
 
 echo '==='
-set -u 2> /dev/null || :
-# shellcheck disable=SC3040 # Ignore: In POSIX sh, set option pipefail is undefined
-case "$(set -o || :)" in *'pipefail'*) set -o pipefail ;; *) ;; esac
-if command 1> /dev/null 2>&1 -v 'setopt'; then setopt SH_WORD_SPLIT || printf '%s\n' 'Failed: setopt'; fi
+
+# For "zsh" shell
+if command 1> /dev/null 2>&1 -v 'setopt'; then
+  setopt SH_WORD_SPLIT || printf 1>&2 '%s\n' 'Failed: setopt'
+fi
 
 command 1> /dev/null 2>&1 -v 'local' || {
-  \eval ' local() { :; } ' || :                                               # Create a dummy "local" function for shells without support for local (example: ksh)
-  if command 1> /dev/null 2>&1 -v 'typeset'; then alias 'local'='typeset'; fi # On some variants of ksh this really works, but leave the function as dummy fallback
+  # Workaround for shells without support for local (example: ksh)
+  \eval ' local() { :; } ' || :
+  # On some variants of ksh this really works, but leave the function as dummy fallback
+  if command 1> /dev/null 2>&1 -v 'typeset'; then alias 'local'='typeset'; fi
 }
+
+### GLOBAL VARIABLES ###
 
 POSIXLY_CORRECT='y'
 NL='
 '
 export POSIXLY_CORRECT NL
 
-set +e ###
+set +e
+
+### SCRIPT ###
 
 convert_max_signed_int_to_bit()
 {
@@ -184,7 +196,7 @@ hex_bytes_to_int()
 compare_hex_bytes()
 {
   test "${3}" -gt 0 || return 1
-  #test "$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))" || :)" = "${4}"
+  test "$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))" || :)" = "${4}"
 }
 
 # Params:
@@ -205,7 +217,7 @@ extract_bytes()
 extract_bytes_and_swap()
 {
   test "${3}" -gt 0 || return 1
-  #_ebas_bytes="$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))")" || return 2
+  _ebas_bytes="$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))")" || return 2
 
   if test "${4-}" = 'true'; then
     if test "${3}" = 4; then
@@ -805,7 +817,7 @@ pause_if_needed()
 {
   # shellcheck disable=SC3028 # In POSIX sh, SHLVL is undefined
   if test "${NO_PAUSE:-0}" = '0' && test "${CI:-false}" = 'false' && test "${TERM_PROGRAM-}" != 'vscode' && test "${SHLVL:-1}" = '1' && test -t 0 && test -t 1 && test -t 2; then
-    printf 1>&2 '\n\033[1;32m%s\033[0m' 'Press any key to exit...' || :
+    printf 1>&2 '\n\033[1;32m%s\033[0m' 'Press any key to exit... ' || :
     # shellcheck disable=SC3045
     IFS='' read 1> /dev/null 2>&1 -r -s -n 1 _ || IFS='' read 1>&2 -r _ || :
     printf 1>&2 '\n' || :
@@ -913,9 +925,9 @@ main()
   done
   _shell_arithmetic_bit="$(convert_max_signed_int_to_bit "${_max}")" || _shell_arithmetic_bit='unknown'
 
-  _shell_printf_bit='' #"$(convert_max_unsigned_int_to_bit "$(get_max_unsigned_int_of_shell_printf || :)")" || _shell_printf_bit='unknown'
+  _shell_printf_bit="$(convert_max_unsigned_int_to_bit "$(get_max_unsigned_int_of_shell_printf || :)")" || _shell_printf_bit='unknown'
 
-  _awk_printf_bit='' #"$(convert_max_unsigned_int_to_bit "$(awk -- 'BEGIN { printf "%u\n", "-1" }' || :)")" || _awk_printf_bit='unknown'
+  _awk_printf_bit="$(convert_max_unsigned_int_to_bit "$(awk -- 'BEGIN { printf "%u\n", "-1" }' || :)")" || _awk_printf_bit='unknown'
 
   # IMPORTANT: For very big integer numbers GNU Awk may return the exponential notation or an imprecise number
   _max='-1'
@@ -1038,7 +1050,7 @@ while test "${#}" -gt 0; do
 done
 
 if test "${execute_script}" = 'true'; then
-  #if test -e '/usr/bin/uname' && test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys'; then PATH="/usr/bin:${PATH:-/usr/bin}"; fi # Avoid bugs on Bash under Windows
+  if test -e '/usr/bin/uname' && test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys'; then PATH="/usr/bin:${PATH:-/usr/bin}"; fi # Avoid bugs on Bash under Windows
 
   if test "${#}" -eq 0; then
     main
