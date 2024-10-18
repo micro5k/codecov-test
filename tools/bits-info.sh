@@ -38,6 +38,12 @@ command 1> /dev/null 2>&1 -v 'local' || {
 
 ### GLOBAL VARIABLES ###
 
+echo '---'
+test -e '/usr/bin/uname' && echo ok || echo fail
+echo '---'
+test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys' && echo ok || echo fail
+echo '---'
+
 POSIXLY_CORRECT='y'
 NL='
 '
