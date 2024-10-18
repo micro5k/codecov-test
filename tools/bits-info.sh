@@ -15,7 +15,7 @@ set -u 2> /dev/null || :
 case "$(set -o || :)" in *'pipefail'*) set -o pipefail || printf 1>&2 '%s\n' 'Failed: pipefail' ;; *) ;; esac
 
 # The "obosh" shell does NOT support "command" while the "posh" shell does NOT support "type"
-command 1> /dev/null 2> /dev/null -v 'command' || command()
+{ command 1> /dev/null -v 'command'; } 2> /dev/null || command()
 {
   test "${1-}" = '-v' || exit 255
   shift
@@ -961,10 +961,10 @@ main()
   printf '%s\n\n' "Bits of shell 'printf': ${_shell_printf_bit}"
 
 echo '---'
-tmp_var="$(printf 2> /dev/null '%u\n' '-1')" || :
+tmp_var="$(printf '%u\n' '-1')" 2> /dev/null || :
 echo '---'
 echo '---'
-printf '%u\n' '-1' || :
+printf '%u\n' '-1' 2> /dev/null || :
 echo '---'
 
   printf '%s %s\n' "Version of awk:" "$(get_version 'awk' || :)"
