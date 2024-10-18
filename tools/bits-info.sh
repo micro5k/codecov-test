@@ -8,11 +8,21 @@
 SCRIPT_NAME='Bits info'
 SCRIPT_VERSION='1.4'
 
-readlink "/proc/$$/exe" | grep 'obosh' && set -x || :
+#readlink "/proc/$$/exe" | grep 'obosh' && set -x || :
 
+echo '==='
 abc_f() { local abc && echo 'OK: local' || echo 'Failed: local'; }
 abc_f
 
+echo '---'
+command -v 'local' && echo 'OK: local' || echo 'Failed: local'
+type 'local' && echo 'OK: local' || echo 'Failed: local'
+
+echo '---'
+command -v 'setopt' && echo 'OK: setopt' || echo 'Failed: setopt'
+type 'setopt' && echo 'OK: setopt' || echo 'Failed: setopt'
+
+echo '==='
 set -u 2> /dev/null || :
 # shellcheck disable=SC3040 # Ignore: In POSIX sh, set option pipefail is undefined
 case "$(set -o || :)" in *'pipefail'*) set -o pipefail ;; *) ;; esac
@@ -27,6 +37,8 @@ POSIXLY_CORRECT='y'
 NL='
 '
 export POSIXLY_CORRECT NL
+
+set +e ###
 
 convert_max_signed_int_to_bit()
 {
