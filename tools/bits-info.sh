@@ -180,7 +180,7 @@ hex_bytes_to_int()
 compare_hex_bytes()
 {
   test "${3}" -gt 0 || return 1
-  #test "$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))" || :)" = "${4}"
+  test "$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))" || :)" = "${4}"
 }
 
 # Params:
@@ -201,7 +201,7 @@ extract_bytes()
 extract_bytes_and_swap()
 {
   test "${3}" -gt 0 || return 1
-  #_ebas_bytes="$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))")" || return 2
+  _ebas_bytes="$(printf '%s' "${1}" | cut -b "$((${2} * 2 + 1))-$(((${2} + ${3}) * 2))")" || return 2
 
   if test "${4-}" = 'true'; then
     if test "${3}" = 4; then
@@ -819,14 +819,10 @@ main()
   _limits_date='32767 2147480047 2147483647 32535215999 32535244799 67767976233529199 67767976233532799 67768036191673199 67768036191676799 9223372036854775807'
   _limits_u='65535 2147483647 2147483648 4294967295 18446744073709551615'
 
-echo "$(get_shell_exe)"
-echo "$(get_shell_exe || :)"
-echo "`get_shell_exe`"
-
-  shell_exe="$(get_shell_exe || :)"
+  shell_exe="$(get_shell_exe)" || :
   if test "$(uname 2> /dev/null -o || :)" = 'Msys' && command 1> /dev/null 2>&1 -v 'cygpath'; then shell_exe="$(cygpath -m -a -l -- "${shell_exe}" || :)"; fi
-  shell_info="$(get_shell_info "${shell_exe}" || :)"
-  shell_name="$(printf '%s\n' "${shell_info}" | cut -d ' ' -f '1' || :)"
+  shell_info="$(get_shell_info "${shell_exe}")" || :
+  shell_name="$(printf '%s\n' "${shell_info}" | cut -d ' ' -f '1')" || :
 
   printf '%s %s\n' "Shell:" "${shell_name}"
   if shell_applet="$(get_applet_name "${shell_name}")"; then
@@ -913,11 +909,11 @@ echo "`get_shell_exe`"
   done
   _shell_arithmetic_bit="$(convert_max_signed_int_to_bit "${_max}")" || _shell_arithmetic_bit='unknown'
 
-  tmp_var="$(get_max_unsigned_int_of_shell_printf || :)"
-  _shell_printf_bit="$(convert_max_unsigned_int_to_bit "${tmp_var}" || :)"
+  tmp_var="$(get_max_unsigned_int_of_shell_printf)" || :
+  _shell_printf_bit="$(convert_max_unsigned_int_to_bit "${tmp_var}")" || :
 
-  tmp_var="$(awk -- 'BEGIN { printf "%u\n", "-1" }' || :)"
-  _awk_printf_bit="$(convert_max_unsigned_int_to_bit "${tmp_var}" || :)"
+  tmp_var="$(awk -- 'BEGIN { printf "%u\n", "-1" }')" || :
+  _awk_printf_bit="$(convert_max_unsigned_int_to_bit "${tmp_var}")" || :
 
   # IMPORTANT: For very big integer numbers GNU Awk may return the exponential notation or an imprecise number
   _max='-1'
@@ -1040,7 +1036,7 @@ while test "${#}" -gt 0; do
 done
 
 if test "${execute_script}" = 'true'; then
-  #if test -e '/usr/bin/uname' && test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys'; then PATH="/usr/bin:${PATH:-/usr/bin}"; fi # Avoid bugs on Bash under Windows
+  if test -e '/usr/bin/uname' && test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys'; then PATH="/usr/bin:${PATH:-/usr/bin}"; fi # Avoid bugs on Bash under Windows
 
   if test "${#}" -eq 0; then
     main
