@@ -10,7 +10,8 @@ SCRIPT_VERSION='1.4'
 
 readlink "/proc/$$/exe" | grep 'obosh' && set -x || :
 
-local abc || echo 'Failed: local'
+abc_f() { local abc && echo 'OK: local' || echo 'Failed: local'; }
+abc_f
 
 set -u 2> /dev/null || :
 # shellcheck disable=SC3040 # Ignore: In POSIX sh, set option pipefail is undefined
@@ -1018,7 +1019,7 @@ while test "${#}" -gt 0; do
 done
 
 if test "${execute_script}" = 'true'; then
-  if test -e '/usr/bin/uname' && test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys'; then PATH="/usr/bin:${PATH:-/usr/bin}"; fi # Avoid bugs on Bash under Windows
+  #if test -e '/usr/bin/uname' && test "$(/usr/bin/uname 2> /dev/null -o || :)" = 'Msys'; then PATH="/usr/bin:${PATH:-/usr/bin}"; fi # Avoid bugs on Bash under Windows
 
   if test "${#}" -eq 0; then
     main
