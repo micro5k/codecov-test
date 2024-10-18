@@ -10,6 +10,8 @@ SCRIPT_VERSION='1.4'
 
 readlink "/proc/$$/exe" | grep 'obosh' && set -x || :
 
+local abc || echo 'Failed: local'
+
 set -u 2> /dev/null || :
 # shellcheck disable=SC3040 # Ignore: In POSIX sh, set option pipefail is undefined
 case "$(set -o || :)" in *'pipefail'*) set -o pipefail ;; *) ;; esac
