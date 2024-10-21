@@ -885,6 +885,7 @@ main()
   fi
 
 set -x
+echo '1---'
   if test "${OS-}" = 'Windows_NT' && os_bit="${PROCESSOR_ARCHITEW6432:-${PROCESSOR_ARCHITECTURE-}}" && test -n "${os_bit}"; then
     # On Windows 2000+ / ReactOS
     case "${os_bit}" in
@@ -892,9 +893,11 @@ set -x
       x86) os_bit='32-bit' ;;
       *) os_bit='unknown' ;;
     esac
-  elif command 1> /dev/null 2>&1 -v 'getconf' && os_bit="$(getconf 'LONG_BIT')" && test -n "${os_bit}"; then
+  elif command 1> /dev/null 2>&1 -v 'getconf' && echo '2---' && os_bit="$(getconf 'LONG_BIT')" && echo '3---' && test -n "${os_bit}"; then
+echo '4---'
     os_bit="${os_bit}-bit"
   elif test -r '/system/build.prop'; then
+echo '5---'
     # On Android
     case "$(file_getprop 'ro.product.cpu.abi' '/system/build.prop' || :)" in
       'x86_64' | 'arm64-v8a' | 'mips64' | 'riscv64') os_bit='64-bit' ;;
@@ -902,9 +905,10 @@ set -x
       *) os_bit='unknown' ;;
     esac
   else
+echo '6---'
     os_bit="$(retrieve_bitness_from_uname || :)" # Use it only as last resort (almost never happens)
   fi
-set +x
+echo '7---'
 
   if test -r '/proc/cpuinfo' && tmp_var="$(grep -e '^flags[[:space:]]*:' -- '/proc/cpuinfo' | cut -d ':' -f '2-' -s)" && test -n "${tmp_var}"; then
     if printf '%s\n' "${tmp_var}" | grep -m 1 -q -w -e '[[:lower:]]\{1,\}_lm'; then
@@ -934,6 +938,7 @@ set +x
   else
     cpu_bit='unknown'
   fi
+set +x
 
   _max='-1'
   for _n in ${_limits}; do
