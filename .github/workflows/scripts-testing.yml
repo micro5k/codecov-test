@@ -162,7 +162,7 @@ jobs:
               printf 'SHELL: %s - SCRIPT: %s\n\n' "${_shell_cmd:?}" "${1:?}"
               _status='0'
               if test "${_shell:?}" = 'busybox' || test "${_shell:?}" = 'busybox-legacy'; then
-                "${_shell_cmd:?}" ash "${workspace_dir:?}/${1:?}" ${2-} || _status="${?}"
+                "${_shell_cmd:?}" hush "${workspace_dir:?}/${1:?}" ${2-} || _status="${?}"
               else
                 "${_shell_cmd:?}" "${workspace_dir:?}/${1:?}" ${2-} || _status="${?}"
               fi
