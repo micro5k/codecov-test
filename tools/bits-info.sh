@@ -26,9 +26,9 @@ case "$(set 2> /dev/null -o || set || :)" in *'pipefail'*) set -o pipefail || pr
 
 echo '==='
 result=0
-if false; then
+if test '' = 'no'; then
   result=1
-elif command -v test; then
+elif command -v test && false; then
   result=2
 else
   result=3
