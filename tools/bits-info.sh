@@ -8,6 +8,18 @@
 SCRIPT_NAME='Bits info'
 SCRIPT_VERSION='1.5.4'
 
+echo '==='
+result=0
+if false; then
+  result=1
+elif true && false; then
+  result=2
+else
+  result=3
+fi
+echo "Result: ${result}"
+echo '==='
+
 ### CONFIGURATION ###
 
 set -u 2> /dev/null || :
@@ -23,18 +35,6 @@ case "$(set 2> /dev/null -o || set || :)" in *'pipefail'*) set -o pipefail || pr
   shift
   type "${@}"
 }
-
-echo '==='
-result=0
-if test '' = 'no'; then
-  result=1
-elif command -v test && false; then
-  result=2
-else
-  result=3
-fi
-echo "Result: ${result}"
-echo '==='
 
 # For "zsh" shell
 if command 1> /dev/null 2>&1 -v 'setopt'; then
