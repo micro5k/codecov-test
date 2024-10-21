@@ -8,6 +8,13 @@
 SCRIPT_NAME='Bits info'
 SCRIPT_VERSION='1.5.4'
 
+echo '==='
+if true && false; then
+  echo 'Result: 1'
+else
+  echo 'Result: 2'
+fi
+echo '==='
 ### CONFIGURATION ###
 
 set -u 2> /dev/null || :
