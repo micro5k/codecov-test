@@ -8,6 +8,10 @@
 SCRIPT_NAME='Bits info'
 SCRIPT_VERSION='1.5.3'
 
+echo '==='
+command 1> /dev/null -v 'command'; echo $?
+command 1> /dev/null -v ':'; echo $?
+echo '==='
 ### CONFIGURATION ###
 
 set -u 2> /dev/null || :
@@ -892,11 +896,9 @@ main()
       x86) os_bit='32-bit' ;;
       *) os_bit='unknown' ;;
     esac
-  elif command 1> /dev/null 2>&1 -v 'getconf' && echo '2---' && os_bit="$(getconf 'LONG_BIT')" && echo '3---' && test -n "${os_bit}"; then
-echo '4---'
+  elif command 1> /dev/null 2>&1 -v 'getconf' && os_bit="$(getconf 'LONG_BIT')" && test -n "${os_bit}"; then
     os_bit="${os_bit}-bit"
   elif test -r '/system/build.prop'; then
-echo '5---'
     # On Android
     case "$(file_getprop 'ro.product.cpu.abi' '/system/build.prop' || :)" in
       'x86_64' | 'arm64-v8a' | 'mips64' | 'riscv64') os_bit='64-bit' ;;
@@ -904,7 +906,6 @@ echo '5---'
       *) os_bit='unknown' ;;
     esac
   else
-echo '6---'
     os_bit="$(retrieve_bitness_from_uname || :)" # Use it only as last resort (almost never happens)
   fi
 
