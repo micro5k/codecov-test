@@ -884,8 +884,7 @@ main()
     shell_bit="$(retrieve_bitness_from_uname || :)" # Use it only as last resort (almost never happens)
   fi
 
-set -x
-echo '1---'
+  os_bit='unknown'
   if test "${OS-}" = 'Windows_NT' && os_bit="${PROCESSOR_ARCHITEW6432:-${PROCESSOR_ARCHITECTURE-}}" && test -n "${os_bit}"; then
     # On Windows 2000+ / ReactOS
     case "${os_bit}" in
@@ -908,8 +907,6 @@ echo '5---'
 echo '6---'
     os_bit="$(retrieve_bitness_from_uname || :)" # Use it only as last resort (almost never happens)
   fi
-echo '7---'
-set +x
 
   if test -r '/proc/cpuinfo' && tmp_var="$(grep -e '^flags[[:space:]]*:' -- '/proc/cpuinfo' | cut -d ':' -f '2-' -s)" && test -n "${tmp_var}"; then
     if printf '%s\n' "${tmp_var}" | grep -m 1 -q -w -e '[[:lower:]]\{1,\}_lm'; then
@@ -1005,7 +1002,7 @@ set +x
   _date_u_bit="$(convert_max_signed_int_to_bit "${_max}")" || _date_u_bit='unknown'
 
   printf '%s\n' "Bits of shell: ${shell_bit}"
-  printf '%s\n' "Bits of OS: ${os_bit:-unknown}"
+  printf '%s\n' "Bits of OS: ${os_bit}"
   printf '%s\n\n' "Bits of CPU: ${cpu_bit}"
 
   printf '%s\n' "Bits of shell 'test' int comparison: ${_shell_test_bit}"
