@@ -140,7 +140,7 @@ jobs:
               _s_shell="$(resolve_base "${2:?}")" || _s_shell="${2:?}"
             fi
             case "${_s_shell?}" in
-              obosh) return 0 ;; # Skip
+              #obosh) return 0 ;; # Skip
               *) ;;
             esac
             if test "${1:?}" = 'cmdline.sh'; then
