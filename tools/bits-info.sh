@@ -26,10 +26,12 @@ case "$(set 2> /dev/null -o || set || :)" in *'pipefail'*) set -o pipefail || pr
 
 echo '==='
 result=0
-if command -v test; then
+if false; then
   result=1
-else
+elif command -v test; then
   result=2
+else
+  result=3
 fi
 echo "Result: ${result}"
 echo '==='
