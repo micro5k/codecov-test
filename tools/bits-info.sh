@@ -5,6 +5,16 @@
 # shellcheck enable=all
 # shellcheck disable=SC3043 # In POSIX sh, local is undefined
 
+my_func()
+{
+  echo "${MY_VAR}"
+}
+
+MY_VAR='true'
+my_func
+unset MY_VAR
+exit 0
+
 SCRIPT_NAME='Bits info'
 SCRIPT_VERSION='1.5.9'
 
