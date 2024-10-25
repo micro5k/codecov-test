@@ -5,9 +5,11 @@
 # shellcheck enable=all
 # shellcheck disable=SC3043 # In POSIX sh, local is undefined
 
+set -u
+
 my_func()
 {
-  echo "${MY_VAR}"
+    if test "${IS_MSYS}" = 'true'; then echo 123; else echo 345; fi
 }
 
 MY_VAR='true'
