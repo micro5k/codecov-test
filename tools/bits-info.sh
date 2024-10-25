@@ -9,7 +9,7 @@ set -u
 
 my_func()
 {
-    if test "${IS_MSYS}" = 'true'; then echo 123; else echo 345; fi
+    if test "${MY_VAR}" = 'true'; then echo 123; else echo 345; fi
 }
 
 MY_VAR='true'
