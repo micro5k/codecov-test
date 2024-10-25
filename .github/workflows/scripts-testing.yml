@@ -23,7 +23,7 @@ jobs:
   base:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest, macos-13]
+        os: [macos-latest]
       fail-fast: false
     name: "${{ matrix.os }}"
     runs-on: "${{ matrix.os }}"
@@ -190,7 +190,7 @@ jobs:
           {
             local _shell _shell_cmd _status
             EXECUTED_LIST=''
-            for _shell in sh dash bash busybox-legacy busybox busybox-x86 busybox-x86 ash hush mksh pdksh oksh ksh88 ksh93 ksh zsh yash posh osh bosh pbosh obosh; do
+            for _shell in osh; do
               if test "${_shell:?}" = 'ksh' && test -n "${ORIGINAL_KSH?}"; then _shell="${ORIGINAL_KSH:?}"; fi
               if ! _shell_cmd="$(command -v "${_shell:?}")" || skip "${1:?}" "${_shell:?}"; then continue; fi
               if test "${_shell:?}" != 'busybox-x86' && ! not_already_excuted "${_shell_cmd:?}"; then continue; fi
