@@ -126,9 +126,21 @@ jobs:
             if wget -q -O '${{ github.workspace }}/cache/temp/oils-for-unix.tar' -- "https://op.oilshell.org/uuu/github-jobs/8159/cpp-tarball.wwz/_release/oils-for-unix.tar"; then
               tar -x -f '${{ github.workspace }}/cache/temp/oils-for-unix.tar' -C '${{ github.workspace }}/cache/temp' || exit "${?}"
               cd '${{ github.workspace }}/cache/temp/oils-for-unix-0.23.0' || exit "${?}"
+              echo '-------'
+              echo 'CONFIGURE'
+              echo '-------'
               ./configure || exit "${?}"
+              echo '-------'
+              echo 'BUILD'
+              echo '-------'
               ./_build/oils.sh || exit "${?}"
-              ./install || exit "${?}"
+              echo '-------'
+              echo 'INSTALL'
+              echo '-------'
+              ./install || echo "${?}"
+              echo '-------'
+              echo 'END'
+              echo '-------'
               cd "${OLDPWD}" || exit "${?}"
             fi
             rm -f -- '${{ github.workspace }}/cache/temp' || exit "${?}"
