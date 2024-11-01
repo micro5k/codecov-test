@@ -123,7 +123,7 @@ jobs:
             brew 1> /dev/null install --quiet 'mksh' 'oksh' 'ksh93' 'yash'
             #brew install --quiet --build-from-source 'oils-for-unix'
             mkdir -p -- '${{ github.workspace }}/cache/temp' || exit "${?}"
-            if wget -q -O '${{ github.workspace }}/cache/temp/oils-for-unix.tar' -- "https://op.oilshell.org/uuu/github-jobs/8159/cpp-tarball.wwz/_release/oils-for-unix.tar"; then
+            if wget -q -O '${{ github.workspace }}/cache/temp/oils-for-unix.tar' -- "https://op.oilshell.org/uuu/github-jobs/8206/cpp-tarball.wwz/_release/oils-for-unix.tar"; then
               tar -x -f '${{ github.workspace }}/cache/temp/oils-for-unix.tar' -C '${{ github.workspace }}/cache/temp' || exit "${?}"
               cd '${{ github.workspace }}/cache/temp/oils-for-unix-0.23.0' || exit "${?}"
               echo '-------'
