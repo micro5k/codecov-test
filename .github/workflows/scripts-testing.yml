@@ -121,7 +121,17 @@ jobs:
             sudo apt-get -y -qq install 'mksh' 'yash' 'posh' 1> /dev/null
           elif test "${current_os:?}" = 'macOS'; then
             brew 1> /dev/null install --quiet 'mksh' 'oksh' 'ksh93' 'yash'
-            brew install --quiet --build-from-source 'oils-for-unix'
+            #brew install --quiet --build-from-source 'oils-for-unix'
+            mkdir -p -- '${{ github.workspace }}/cache/temp' || exit "${?}"
+            if wget -q -O '${{ github.workspace }}/cache/temp/oils-for-unix.tar' -- "https://op.oilshell.org/uuu/github-jobs/8159/cpp-tarball.wwz/_release/oils-for-unix.tar"; then
+              tar -x -f '${{ github.workspace }}/cache/temp/oils-for-unix.tar' -C '${{ github.workspace }}/cache/temp' || exit "${?}"
+              cd '${{ github.workspace }}/cache/temp/oils-for-unix-0.23.0' || exit "${?}"
+              ./configure || exit "${?}"
+              ./_build/oils.sh || exit "${?}"
+              ./install || exit "${?}"
+              cd "${OLDPWD}" || exit "${?}"
+            fi
+            rm -f -- '${{ github.workspace }}/cache/temp' || exit "${?}"
           else
             choco 1> /dev/null install 'busybox' -y --no-progress
             #choco install 'schily-cdrtools' --pre -y --no-progress
