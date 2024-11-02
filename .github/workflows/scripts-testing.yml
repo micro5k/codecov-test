@@ -133,7 +133,7 @@ jobs:
               echo '-------'
               echo 'BUILD'
               echo '-------'
-              ./_build/oils.sh 1> /dev/null || exit "${?}"
+              ./_build/oils.sh 2> /dev/null || exit "${?}"
               echo '-------'
               echo 'INSTALL'
               echo '-------'
@@ -146,7 +146,9 @@ jobs:
             rm -f -r -- '${{ github.workspace }}/cache/temp' || exit "${?}"
             brew install --quiet 'etsh' || echo $?
             command -v 'etsh' || echo $?
+            echo '==='
             '/opt/homebrew/bin/etsh' --version || echo $?
+            echo '==='
           else
             choco 1> /dev/null install 'busybox' -y --no-progress
             #choco install 'schily-cdrtools' --pre -y --no-progress
