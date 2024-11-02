@@ -11,8 +11,6 @@ command 1> /dev/null 2>&1 -v 'local' || {
   if command 1> /dev/null 2>&1 -v 'typeset'; then alias 'local'='typeset'; fi
 }
 
-shopt +s strict_errexit || echo $?
-
 if test "${A5K_FUNCTIONS_INCLUDED:-false}" = 'false'; then
   main()
   {
