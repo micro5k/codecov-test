@@ -133,7 +133,7 @@ jobs:
               echo '-------'
               echo 'BUILD'
               echo '-------'
-              ./_build/oils.sh || exit "${?}"
+              ./_build/oils.sh 1> /dev/null || exit "${?}"
               echo '-------'
               echo 'INSTALL'
               echo '-------'
