@@ -1,9 +1,5 @@
-#!/usr/bin/env sh
-
 SCRIPT_NAME='Bits info'
 SCRIPT_VERSION='1.5.19'
-
-### CONFIGURATION ###
 
 set -u 2> /dev/null || :
 
