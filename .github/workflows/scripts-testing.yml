@@ -144,11 +144,11 @@ jobs:
               cd "${OLDPWD}" || exit "${?}"
             fi
             rm -f -r -- '${{ github.workspace }}/cache/temp' || exit "${?}"
-            brew install --quiet 'etsh' || echo $?
-            command -v 'etsh' || echo $?
-            echo '==='
-            '/opt/homebrew/bin/etsh' --version || echo $?
-            echo '==='
+            #brew install --quiet 'etsh' || echo $?
+            #command -v 'etsh' || echo $?
+            #echo '==='
+            #'/opt/homebrew/bin/etsh' --version || echo $?
+            #echo '==='
           else
             choco 1> /dev/null install 'busybox' -y --no-progress
             #choco install 'schily-cdrtools' --pre -y --no-progress
@@ -228,7 +228,7 @@ jobs:
           {
             local _shell _shell_cmd _status
             EXECUTED_LIST=''
-            for _shell in sh dash bash busybox busybox-x86 busybox-x86 busybox-x86-legacy busybox-x86-legacy ash hush mksh pdksh oksh ksh88 ksh93 ksh zsh yash posh osh bosh pbosh obosh; do
+            for _shell in sh dash bash busybox busybox-x86 busybox-x86 busybox-x86-legacy busybox-x86-legacy ash hush mksh pdksh oksh ksh88 ksh93 ksh zsh yash posh osh ysh bosh pbosh obosh; do
               if test "${_shell:?}" = 'ksh' && test -n "${ORIGINAL_KSH?}"; then _shell="${ORIGINAL_KSH:?}"; fi
               if ! _shell_cmd="$(command -v "${_shell:?}")"; then continue; fi
               set_applet "${_shell:?}" "${_shell_cmd:?}"
