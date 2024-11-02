@@ -1,5 +1,14 @@
-set SCRIPT_NAME='Bits info'
-set SCRIPT_VERSION='1.5.19'
+#!/usr/bin/env sh
+# SPDX-FileCopyrightText: (c) 2024 ale5000
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# shellcheck enable=all
+# shellcheck disable=SC3043 # In POSIX sh, local is undefined
+
+SCRIPT_NAME='Bits info'
+SCRIPT_VERSION='1.5.19'
+
+### CONFIGURATION ###
 
 set -u 2> /dev/null || :
 
