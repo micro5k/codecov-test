@@ -1,5 +1,5 @@
-SCRIPT_NAME='Bits info'
-SCRIPT_VERSION='1.5.19'
+set SCRIPT_NAME='Bits info'
+set SCRIPT_VERSION='1.5.19'
 
 set -u 2> /dev/null || :
 
