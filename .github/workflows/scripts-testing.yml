@@ -144,6 +144,8 @@ jobs:
               cd "${OLDPWD}" || exit "${?}"
             fi
             rm -f -r -- '${{ github.workspace }}/cache/temp' || exit "${?}"
+            brew install --quiet 'etsh'
+            command -v 'etsh' || echo $?
           else
             choco 1> /dev/null install 'busybox' -y --no-progress
             #choco install 'schily-cdrtools' --pre -y --no-progress
