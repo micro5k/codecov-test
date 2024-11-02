@@ -148,9 +148,7 @@ jobs:
             #command -v 'etsh' || echo $?
             #echo '==='
             #'/opt/homebrew/bin/etsh' --version || echo $?
-            echo '==='
-            ysh "${workspace_dir:?}/tools/bits-info.sh" || echo $?
-            echo '==='
+            #echo '==='
           else
             choco 1> /dev/null install 'busybox' -y --no-progress
             #choco install 'schily-cdrtools' --pre -y --no-progress
