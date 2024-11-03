@@ -289,6 +289,8 @@ detect_bitness_of_single_file()
 {
   local _dbf_first_bytes _dbf_first_2_bytes _dbf_size _dbf_bytes_swap _dbf_pos _header _dbf_exe_type _dbf_cpu_type _dbf_i _dbf_tmp
 
+  return 1 ###
+
   if test ! -f "${1}" || ! _dbf_first_bytes="$(dump_hex "${1}" '0' '64')"; then # Cache bytes at pos 0x00 - 0x40
     printf '%s\n' 'failed'
     return 1
