@@ -249,7 +249,7 @@ hex_bytes_to_int()
 compare_hex_bytes()
 {
   test "${3}" -gt 0 || return 2
-  set -- "${1}" "$((${2} * 2 + 1))" "$(((${2} + ${3}) * 2))" "${4}" || return 3
+  #set -- "${1}" "$((${2} * 2 + 1))" "$(((${2} + ${3}) * 2))" "${4}" || return 3
   test "$(printf '%s' "${1}" | cut -b "${2}-${3}" || :)" = "${4}"
 }
 
@@ -260,7 +260,7 @@ compare_hex_bytes()
 extract_bytes()
 {
   test "${3}" -gt 0 || return 2
-  set -- "${1}" "$((${2} * 2 + 1))" "$(((${2} + ${3}) * 2))" || return 3
+  #set -- "${1}" "$((${2} * 2 + 1))" "$(((${2} + ${3}) * 2))" || return 3
   printf '%s' "${1}" | cut -b "${2}-${3}"
 }
 
@@ -272,7 +272,7 @@ extract_bytes()
 extract_bytes_and_swap()
 {
   test "${3}" -gt 0 || return 2
-  set -- "${1}" "$((${2} * 2 + 1))" "$(((${2} + ${3}) * 2))" "${3}" "${4:-false}" || return 3
+  #set -- "${1}" "$((${2} * 2 + 1))" "$(((${2} + ${3}) * 2))" "${3}" "${4:-false}" || return 3
 
   if test "${5}" = 'true'; then
     if test "${4}" = 4; then
