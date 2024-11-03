@@ -16,14 +16,14 @@ set -u 2> /dev/null || :
 case "$(set 2> /dev/null -o || set || :)" in *'pipefail'*) set -o pipefail || printf 1>&2 '%s\n' 'Failed: pipefail' ;; *) ;; esac
 
 # The "obosh" shell does NOT support "command" while the "posh" shell does NOT support "type"
-{
-  command 1> /dev/null -v ':'
-} 2> /dev/null || command()
-{
-  test "${1:-empty}" = '-v' || exit 255
-  shift
-  type "${@}"
-}
+#{
+#  command 1> /dev/null -v ':'
+#} 2> /dev/null || command()
+#{
+#  test "${1:-empty}" = '-v' || exit 255
+#  shift
+#  type "${@}"
+#}
 
 # For "zsh" shell
 if command 1> /dev/null 2>&1 -v 'setopt'; then
