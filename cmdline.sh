@@ -20,7 +20,7 @@ if test "${A5K_FUNCTIONS_INCLUDED:-false}" = 'false'; then
     if test -z "${MAIN_DIR-}" || test -z "${USER_HOME-}"; then
 
       # Avoid picturesque bugs on Bash under Windows
-      if test -x '/usr/bin/uname' && _uname_os="$(/usr/bin/uname 2> /dev/null -o)" && test "${_uname_os}" = 'Msys'; then PATH="/usr/bin:${PATH:-%empty}"; fi
+      #if test -x '/usr/bin/uname' && _uname_os="$(/usr/bin/uname 2> /dev/null -o)" && test "${_uname_os}" = 'Msys'; then PATH="/usr/bin:${PATH:-%empty}"; fi
 
       if test -z "${MAIN_DIR-}"; then
         # shellcheck disable=SC3028,SC2128 # Intended: In POSIX sh, BASH_SOURCE is undefined / Expanding an array without an index only gives the first element
