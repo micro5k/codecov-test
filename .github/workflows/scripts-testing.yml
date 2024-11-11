@@ -120,8 +120,9 @@ jobs:
           if test "${current_os:?}" = 'Linux'; then
             sudo apt-get -y -qq install 'mksh' 'yash' 'posh' 1> /dev/null
           elif test "${current_os:?}" = 'macOS'; then
+            brew update
             brew 1> /dev/null install --quiet 'mksh' 'oksh' 'ksh93' 'yash'
-            brew install --quiet 'oils-for-unix@0.24.0'
+            brew install --quiet 'oils-for-unix'
             osh --version
             mkdir -p -- '${{ github.workspace }}/cache/temp' || exit "${?}"
             if false && wget -q -O '${{ github.workspace }}/cache/temp/oils-for-unix.tar' -- "https://op.oilshell.org/uuu/github-jobs/8214/cpp-tarball.wwz/_release/oils-for-unix.tar"; then
