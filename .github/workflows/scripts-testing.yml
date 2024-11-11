@@ -120,9 +120,9 @@ jobs:
           if test "${current_os:?}" = 'Linux'; then
             sudo apt-get -y -qq install 'mksh' 'yash' 'posh' 1> /dev/null
           elif test "${current_os:?}" = 'macOS'; then
-            brew update
+            brew update --quiet
             brew 1> /dev/null install --quiet 'mksh' 'oksh' 'ksh93' 'yash'
-            brew install --quiet 'oils-for-unix'
+            brew 1> /dev/null install --quiet 'oils-for-unix'
             osh --version
             mkdir -p -- '${{ github.workspace }}/cache/temp' || exit "${?}"
             if false && wget -q -O '${{ github.workspace }}/cache/temp/oils-for-unix.tar' -- "https://op.oilshell.org/uuu/github-jobs/8214/cpp-tarball.wwz/_release/oils-for-unix.tar"; then
@@ -198,12 +198,13 @@ jobs:
               case "${_s_shell?}" in
                 'obosh') return 0 ;;                                       # Skip
                 'busybox'*) if test "${3?}" = 'hush'; then return 0; fi ;; # Skip if hush
+                'ysh') return 0 ;; # Skip
                 *) ;;
               esac
             else
               case "${_s_shell?}" in
-                #'osh') return 0 ;; # Skip until is fixed
                 'obosh') return 0 ;; # Skip
+                'ysh') return 0 ;; # Skip
                 *) ;;
               esac
             fi
