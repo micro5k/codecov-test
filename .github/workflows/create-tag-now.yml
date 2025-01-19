@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
 
     steps:
       - name: "Checkout sources"
@@ -36,7 +37,7 @@ jobs:
               console.log(error.message)
               if(error.status == 422) {
                 console.log('::warning::Tag already exist, ignored!!!')
-                return
+                exit 0
               }
               console.log('::error::Tag creation failed with error ' + error.status)
               console.log('')
