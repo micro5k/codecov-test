@@ -9,15 +9,13 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
-    tags:
-      - "v*"
-if: "startsWith(github.ref, 'refs/tags/v')"
 jobs:
   base-job:
     name: "Release"
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    if: "startsWith(github.ref, 'refs/tags/v')"
+    #permissions:
+    #  contents: write
 
     steps:
       - name: "Checkout sources"
