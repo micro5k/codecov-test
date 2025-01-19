@@ -8,6 +8,7 @@ on:
   create:
     tags:
       - "v*"
+  workflow_call:
 jobs:
   base-job:
     name: "Release"
