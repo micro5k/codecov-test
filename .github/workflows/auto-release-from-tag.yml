@@ -5,10 +5,9 @@
 name: "Release"
 permissions: {}
 on:
-  push:
+  create:
     tags:
       - "v*"
-  workflow_dispatch:
 jobs:
   base-job:
     name: "Release"
