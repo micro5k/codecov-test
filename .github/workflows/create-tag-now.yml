@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write # Needed to create a tag
-      actions: read # Needed to trigger a workflow
+      actions: write # Needed to trigger a workflow
 
     steps:
       - name: "Checkout sources"
