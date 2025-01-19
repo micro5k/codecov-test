@@ -27,7 +27,7 @@ jobs:
         with:
           script: |
             console.log('::notice::Tag name: ${{ steps.repo-info.outputs.version }}')
-            github.rest.git.createRef({
+            await github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: 'refs/tags/${{ steps.repo-info.outputs.version }}',
@@ -42,4 +42,11 @@ jobs:
               console.log('')
               console.log('DEBUG:')
               throw error
+            })
+            console.log('OK')
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'auto-release-from-tag.yml',
+              ref: '${{ steps.repo-info.outputs.version }}'
             })
