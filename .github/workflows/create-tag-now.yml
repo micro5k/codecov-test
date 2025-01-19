@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: (c) 2025 ale5000
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-name: "Create tag now"
+name: "- Create tag now"
 permissions: {}
 on:
   workflow_dispatch:
