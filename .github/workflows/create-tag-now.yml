@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: "Checkout sources"
         uses: actions/checkout@v4
-      - name: Parse version
+      - name: "Parse version"
         id: "repo-info"
         run: |
           # Parsing version...
@@ -26,7 +26,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            console.log('::notice::Tag: ${{ steps.repo-info.outputs.version }}')
+            console.log('::notice::Tag name: ${{ steps.repo-info.outputs.version }}')
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
