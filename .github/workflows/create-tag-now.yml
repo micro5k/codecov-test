@@ -45,6 +45,7 @@ jobs:
               throw error
             })
             if(result && result.status >= 200 && result.status < 300) {
+              console.log('')
               console.log('Triggered the workflow for the release.')
               await github.rest.actions.createWorkflowDispatch({
                 owner: context.repo.owner,
