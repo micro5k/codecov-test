@@ -25,9 +25,7 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "17"
-          cache: "gradle"
-          cache-from: type=gha,scope=global
-          cache-to: type=gha,mode=max,scope=global
+          #cache: "gradle"
       - name: "Build"
         id: "build"
         shell: bash
