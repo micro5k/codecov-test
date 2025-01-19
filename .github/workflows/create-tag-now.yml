@@ -37,7 +37,7 @@ jobs:
               console.log(error.message)
               if(error.status == 422) {
                 console.log('::warning::Tag already exist, ignored!!!')
-                exit 0
+                exit
               }
               console.log('::error::Tag creation failed with error ' + error.status)
               console.log('')
