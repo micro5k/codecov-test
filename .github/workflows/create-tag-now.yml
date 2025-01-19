@@ -27,6 +27,7 @@ jobs:
       - name: "Create tag"
         uses: actions/github-script@v7
         with:
+          retries: 3
           script: |
             console.log('::notice::Tag name: ${{ steps.repo-info.outputs.version }}')
             const result = await github.rest.git.createRef({
