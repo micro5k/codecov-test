@@ -10,8 +10,8 @@ jobs:
   tag-creation:
     name: "Tag creation"
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    #permissions:
+    #  contents: write
 
     steps:
       - name: "Checkout sources"
@@ -32,9 +32,10 @@ jobs:
               ref: 'refs/tags/${{ steps.repo-info.outputs.version }}',
               sha: context.sha
             }).catch(error => {
-              console.log('Tag creation failed with error ' + error.status)
-              console.log(error.message)
+              console.log('::error::Tag creation failed with error ' + error.status)
+              console.log('::error::' + error.message)
               console.log('')
               console.log('DEBUG:')
               throw error;
             })
+            console.log('::notice::Tag created successfully: ${{ steps.repo-info.outputs.version }}')
