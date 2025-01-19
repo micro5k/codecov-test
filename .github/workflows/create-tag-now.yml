@@ -34,7 +34,7 @@ jobs:
               ref: 'refs/tags/${{ steps.repo-info.outputs.version }}',
               sha: context.sha
             }).catch(error => {
-              console.log(error.message)
+              console.log('Error message: ' + error.message)
               if(error.status == 422 && error.message == 'Reference already exists') {
                 console.log('::warning::Tag already exist, ignored!!!')
                 return
