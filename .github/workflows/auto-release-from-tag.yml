@@ -5,7 +5,7 @@
 name: "Auto-release from tag"
 permissions: {}
 on:
-  create:
+  push:
     tags:
       - "v*"
   workflow_dispatch:
