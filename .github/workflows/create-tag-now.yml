@@ -33,5 +33,6 @@ jobs:
               console.log('Tag creation failed with error ' + error.status)
               console.log(error.message)
               console.log('')
-              throw err;
+              console.log('DEBUG:')
+              throw error;
             })
