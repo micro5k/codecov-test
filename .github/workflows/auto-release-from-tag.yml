@@ -8,7 +8,9 @@ on:
   create:
     tags:
       - "v*"
-  workflow_call:
+  workflow_dispatch:
+    tags:
+      - "v*"
 jobs:
   base-job:
     name: "Release"
