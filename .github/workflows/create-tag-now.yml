@@ -29,8 +29,9 @@ jobs:
               repo: context.repo.repo,
               ref: 'refs/tags/${{ steps.repo-info.outputs.version }}',
               sha: context.sha
-            }).catch(err => {
-              console.log('Failed.......')
-              console.log(err.status)
+            }).catch(error => {
+              console.log('Tag creation failed with error ' + error.status)
+              console.log(error.message)
+              console.log('')
               throw err;
             })
