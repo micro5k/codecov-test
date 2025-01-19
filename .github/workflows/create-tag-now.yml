@@ -28,7 +28,7 @@ jobs:
         with:
           script: |
             console.log('::notice::Tag name: ${{ steps.repo-info.outputs.version }}')
-            await github.rest.git.createRef({
+            const result = await github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: 'refs/tags/${{ steps.repo-info.outputs.version }}',
@@ -37,14 +37,14 @@ jobs:
               console.log(error.message)
               if(error.status == 422) {
                 console.log('::warning::Tag already exist, ignored!!!')
-                exit
+                return
               }
               console.log('::error::Tag creation failed with error ' + error.status)
               console.log('')
               console.log('DEBUG:')
               throw error
             })
-            console.log('OK')
+            console.log('OK' + result)
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
