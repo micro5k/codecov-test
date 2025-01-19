@@ -10,6 +10,15 @@ on:
       - "v*"
   workflow_dispatch:
 jobs:
+  job-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "123"
+        shell: bash
+        run: |
+          echo '${{ github.ref }}'
+          echo '${{ github.event.ref }}'
+
   base-job:
     name: "Release"
     runs-on: ubuntu-latest
