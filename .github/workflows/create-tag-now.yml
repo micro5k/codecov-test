@@ -52,6 +52,6 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 workflow_id: 'auto-release-from-tag.yml',
-                ref: '${{ steps.repo-info.outputs.version }}'
+                ref: 'refs/tags/${{ steps.repo-info.outputs.version }}'
               })
             }
