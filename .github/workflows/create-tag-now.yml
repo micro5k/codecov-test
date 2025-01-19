@@ -26,6 +26,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            console.log('::notice::Tag: ${{ steps.repo-info.outputs.version }}')
             github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -33,9 +34,8 @@ jobs:
               sha: context.sha
             }).catch(error => {
               console.log('::error::Tag creation failed with error ' + error.status)
-              console.log('::error::' + error.message)
+              console.log(error.message)
               console.log('')
               console.log('DEBUG:')
-              throw error;
+              throw error
             })
-            console.log('::notice::Tag created successfully: ${{ steps.repo-info.outputs.version }}')
