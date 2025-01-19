@@ -35,7 +35,7 @@ jobs:
               sha: context.sha
             }).catch(error => {
               console.log(error.message)
-              if(error.status == 422) {
+              if(error.status === 422 && error.message === 'Reference already exists') {
                 console.log('::warning::Tag already exist, ignored!!!')
                 return
               }
@@ -44,7 +44,8 @@ jobs:
               console.log('DEBUG:')
               throw error
             })
-            console.log('OK' + result)
+            console.log('OK ' + result)
+            console.log(result.status)
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
