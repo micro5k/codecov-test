@@ -10,8 +10,8 @@ jobs:
   tag-creation:
     name: "Tag creation"
     runs-on: ubuntu-latest
-    #permissions:
-    #  contents: write
+    permissions:
+      contents: write
 
     steps:
       - name: "Checkout sources"
