@@ -24,7 +24,7 @@ jobs:
         with:
           retries: 3
           script: |
-            await octokit.request('POST /repos/{owner}/{repo}/actions/variables', {
+            await github.request('POST /repos/{owner}/{repo}/actions/variables', {
               owner: context.repo.owner,
               repo: context.repo.repo,
               name: 'LAST_NIGHTLY_SHA256',
