@@ -12,8 +12,7 @@ jobs:
   base-job:
     name: "Nightly"
     runs-on: ubuntu-latest
-    permissions:
-      variables: read
+    permissions: write-all
 
     steps:
       - name: "Checkout sources"
