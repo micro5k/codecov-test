@@ -26,6 +26,9 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               name: 'LAST_NIGHTLY_SHA256',
+              headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+              }
             })
             console.log(result.status)
             console.log(result.value)
