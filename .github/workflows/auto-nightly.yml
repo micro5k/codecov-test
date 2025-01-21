@@ -26,11 +26,10 @@ jobs:
             github.rest.git.updateRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/nightly',
+              ref: 'tags/nightly',
               sha: context.sha
             }).catch(error => {
               if(error.status !== 422 || error.message !== 'Reference does not exist') throw error
-              return
               github.rest.git.createRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -70,7 +69,7 @@ jobs:
       - name: "Create nightly release"
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: 'nightly'
+          tag_name: 'nightlyX'
           body: "Nightly build"
           append_body: false
           generate_release_notes: false
