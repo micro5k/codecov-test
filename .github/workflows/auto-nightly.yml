@@ -61,6 +61,13 @@ jobs:
             console.log(response.status);
             console.log(response.message);
             console.log(response.id);
+            for (const id in response) {
+              try {
+                console.log(id);
+              } catch (err) {
+                console.error(err);
+              }
+            }
             if(response.status >= 200 && response.status < 300) {
               await github.rest.repos.deleteRelease({
                 owner: context.repo.owner,
