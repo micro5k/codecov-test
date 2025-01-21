@@ -69,9 +69,10 @@ jobs:
       - name: "Create nightly release"
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: 'nightly'
           body: "Nightly build"
           append_body: false
-          make_latest: false
           generate_release_notes: false
+          make_latest: false
           prerelease: true
           files: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip*"
