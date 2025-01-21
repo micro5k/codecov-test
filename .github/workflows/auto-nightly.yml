@@ -55,7 +55,7 @@ jobs:
             const response = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/nightly'
+              tag: 'refs/tags/nightly'
             }).catch(response => response)
             console.log(response.status)
             console.log(response.message)
@@ -64,10 +64,19 @@ jobs:
             const responseX = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: 'refs/tags/nightlyX'
+              tag: 'refs/tags/nightlyX'
             }).catch(responseX => responseX)
             console.log(responseX.status)
             console.log(responseX.message)
+            if(response.status >= 200 && response.status < 300) {
+              await github.rest.repos.deleteRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: response.id
+              }
+            }
+            elseif(response.status !== 404)
+              throw error
             return
             github.rest.git.deleteRef({
               owner: context.repo.owner,
