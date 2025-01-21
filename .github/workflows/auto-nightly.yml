@@ -18,34 +18,6 @@ jobs:
     steps:
       - name: "Checkout sources"
         uses: actions/checkout@v4
-      - name: "Delete previous nightly tag"
-        uses: actions/github-script@v7
-        with:
-          retries: 3
-          script: |
-            github.rest.git.deleteRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: 'tags/nightly'
-            }).catch(error => {
-              console.log(error.message)
-              console.log(error.status)
-              if(error.status !== 422 || error.message !== 'Reference does not exist') throw error
-            })
-      - name: "Delete previous nightly tag 2"
-        uses: actions/github-script@v7
-        with:
-          retries: 3
-          script: |
-            github.rest.git.deleteRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: 'tags/nightly'
-            }).catch(error => {
-              console.log(error.message)
-              console.log(error.status)
-              if(error.status !== 422 || error.message !== 'Reference does not exist') throw error
-            })
       - name: "Setup Java"
         uses: actions/setup-java@v4
         with:
@@ -75,13 +47,27 @@ jobs:
           printf '%s\n' "::notice::SHA-256: ${ZIP_SHA256:-Missing}"
           printf '%s\n' "::notice::MD5: ${ZIP_MD5:-Missing}"
           : "${ZIP_FOLDER:?}" || exit "${?}"
+      - name: "Delete previous nightly tag"
+        uses: actions/github-script@v7
+        with:
+          retries: 3
+          script: |
+            github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'tags/nightly'
+            }).catch(error => {
+              if(error.status !== 422 || error.message !== 'Reference does not exist') throw error
+            })
       - name: "Create nightly release"
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: 'nightly'
-          body: "Nightly build"
+          name: "Nightly build"
+          tag_name: "nightly"
+          body: ""
           append_body: false
           generate_release_notes: false
           make_latest: false
+          draft: false
           prerelease: true
           files: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip*"
