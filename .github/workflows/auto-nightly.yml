@@ -31,10 +31,6 @@ jobs:
         shell: bash
         run: |
           ### Building nightly...
-          echo "${GITHUB_SHA}"
-          echo '${{ github.sha }}'
-          git rev-parse --short '${{ github.sha }}'
-          git rev-parse --short HEAD
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
       - name: "ZIP info"
         run: |
@@ -100,6 +96,7 @@ jobs:
         with:
           name: "Nightly build"
           tag_name: "nightly"
+          target_commitish: "${{ github.sha }}"
           body: "Latest automatically built ZIP (unstable development snapshot)\n\nSHA-256: ${{ steps.build.outputs.ZIP_SHA256 }}"
           append_body: false
           generate_release_notes: false
