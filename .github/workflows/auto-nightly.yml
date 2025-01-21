@@ -32,9 +32,8 @@ jobs:
         run: |
           ### Building nightly...
           echo "${{ github.sha }}"
-          git log -n 1 --pretty='format:%H' HEAD
-          git log -n 1 --pretty='format:%H' main
-          git log -n 1 --pretty='format:%H'
+          git log -n 1 --pretty='format:%H' 'origin/main' && echo ''
+          git log -n 1 --pretty='format:%H' 'origin/HEAD'
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
       - name: "ZIP info"
         run: |
