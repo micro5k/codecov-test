@@ -24,21 +24,14 @@ jobs:
         with:
           retries: 3
           script: |
-            github.rest.git.updateRef({
+            await github.rest.git.updateRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: 'refs/tags/nightly',
               sha: context.sha
             }).catch(error => {
-              console.log('Error message: ' + error.message)
-              console.log('Error message: ' + error.status)
-              return
-              if(error.status == 422 && error.message == 'Reference already exists') {
-                console.log('::warning::Tag already exist, ignored!!!')
-                return
-                throw error
-              }
-              github.rest.git.createRef({
+              if(error.status !== 422 || error.message !== 'Reference does not exist') throw error
+              await github.rest.git.createRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: 'refs/tags/nightly',
