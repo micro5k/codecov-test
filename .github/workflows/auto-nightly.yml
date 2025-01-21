@@ -30,6 +30,7 @@ jobs:
               sha: context.sha
             }).catch(error => {
               if(error.status !== 422 || error.message !== 'Reference does not exist') throw error
+              return
               github.rest.git.createRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
