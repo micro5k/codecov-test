@@ -56,7 +56,7 @@ jobs:
             const response = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag: 'tags/nightly'
+              tag: 'nightly'
             }).catch(response => response);
             console.log(response.status);
             console.log(response.message);
