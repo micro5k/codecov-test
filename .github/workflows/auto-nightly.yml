@@ -21,9 +21,9 @@ jobs:
       - uses: actions/github-script@v6
         with:
           script: |
-            for (const id in github.rest.releases) {
+            for (const id in github.rest.repos) {
               try {
-                if (typeof(github.rest.releases[id]) === "function") {
+                if (typeof(github.rest.repos[id]) === "function") {
                   console.log(id);
                 }
               } catch (err) {
