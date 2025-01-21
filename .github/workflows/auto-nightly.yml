@@ -52,7 +52,7 @@ jobs:
         with:
           retries: 3
           script: |
-            const response = await github.rest.git.getReleaseByTag({
+            const response = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: 'refs/tags/nightly'
@@ -61,7 +61,7 @@ jobs:
             console.log(response.message)
             console.log(response.id)
             console.log('---')
-            const responseX = await github.rest.git.getReleaseByTag({
+            const responseX = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: 'refs/tags/nightlyX'
