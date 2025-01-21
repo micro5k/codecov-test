@@ -24,7 +24,7 @@ jobs:
         with:
           retries: 3
           script: |
-            await github.rest.git.updateRef({
+            github.rest.git.updateRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: 'refs/tags/nightly',
@@ -38,7 +38,7 @@ jobs:
                 return
                 throw error
               }
-              await github.rest.git.createRef({
+              github.rest.git.createRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: 'refs/tags/nightly',
