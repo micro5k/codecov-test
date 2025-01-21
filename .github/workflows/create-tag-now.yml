@@ -42,11 +42,10 @@ jobs:
             }).catch(error => {
               if(error.status === 422 && error.message === 'Reference already exists') {
                 console.warn('::warning::Tag already exist, ignored!!!');
-                console.error('abcd');
                 return;
               }
-              console.error('Error message: ' + error.message);
               console.error('::error::Tag creation failed with error: ' + error.status);
+              console.error('::error::Error message: ' + error.message);
               console.log('');
               throw error;
             });
