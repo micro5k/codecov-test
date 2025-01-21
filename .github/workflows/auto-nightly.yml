@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: "Checkout sources"
         uses: actions/checkout@v4
-      - name: "Script"
+      - name: "Create or update nightly tag"
         uses: actions/github-script@v7
         with:
           retries: 3
@@ -66,7 +66,6 @@ jobs:
             console.log(result.value)
       - name: "Setup Java"
         uses: actions/setup-java@v4
-        if: false
         with:
           distribution: "temurin"
           java-version: "17"
