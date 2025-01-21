@@ -52,40 +52,33 @@ jobs:
         with:
           retries: 3
           script: |
+            /* jshint esversion: 6 */
             const response = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag: 'refs/tags/nightly'
-            }).catch(response => response)
-            console.log(response.status)
-            console.log(response.message)
-            console.log(response.id)
-            console.log('---')
-            const responseX = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: 'refs/tags/nightlyX'
-            }).catch(responseX => responseX)
-            console.log(responseX.status)
-            console.log(responseX.message)
+            }).catch(response => response);
+            console.log(response.status);
+            console.log(response.message);
+            console.log(response.id);
+            console.log('---');
             if(response.status >= 200 && response.status < 300) {
               await github.rest.repos.deleteRelease({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 release_id: response.id
-              }
+              });
+            } else if(response.status !== 404) {
+              throw error;
             }
-            else if(response.status !== 404) {
-              throw error
-            }
-            return
+            return;
             github.rest.git.deleteRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: 'tags/nightly'
             }).catch(error => {
-              if(error.status !== 422 || error.message !== 'Reference does not exist') throw error
-            })
+              if(error.status !== 422 || error.message !== 'Reference does not exist') throw error;
+            });
       - name: "Create nightly release"
         uses: softprops/action-gh-release@v2
         with:
