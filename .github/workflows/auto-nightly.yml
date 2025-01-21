@@ -75,8 +75,9 @@ jobs:
                 release_id: response.id
               }
             }
-            elseif(response.status !== 404)
+            else if(response.status !== 404) {
               throw error
+            }
             return
             github.rest.git.deleteRef({
               owner: context.repo.owner,
