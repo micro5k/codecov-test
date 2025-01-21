@@ -1,5 +1,5 @@
 ---
-# SPDX-FileCopyrightText: (c) 2025  ale5000
+# SPDX-FileCopyrightText: (c) 2025 ale5000
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: "Nightly"
@@ -63,7 +63,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "Nightly build"
-          tag_name: "nightly"
+          tag_name: "nightlyX"
           body: ""
           append_body: false
           generate_release_notes: false
