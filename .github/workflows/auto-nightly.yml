@@ -1,5 +1,5 @@
 ---
-# SPDX-FileCopyrightText: (c) 2025  ale5000
+# SPDX-FileCopyrightText: (c) 2025 ale5000
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: "Auto-nightly"
@@ -88,7 +88,6 @@ jobs:
             }).then(response => {
               console.log('Previous nightly tag updated.');
             }).catch(error => {
-              console.log('::: ' + error.message)
               if(error.status !== 422 || error.message !== 'Reference does not exist') throw error;
             });
       - name: "Create nightly release"
