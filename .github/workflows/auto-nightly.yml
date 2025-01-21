@@ -61,7 +61,7 @@ jobs:
             console.log(response.status);
             console.log(response.message);
             console.log(response.id);
-            for (const id in response) {
+            for (const id in response.data) {
               try {
                 console.log(id);
               } catch (err) {
