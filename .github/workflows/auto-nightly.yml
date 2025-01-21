@@ -30,16 +30,6 @@ jobs:
                 console.error(err);
               }
             }
-            console.error('---')
-            for (const id in github.rest.actions) {
-              try {
-                if (typeof(github.rest.actions[id]) === "function") {
-                  console.log(id);
-                }
-              } catch (err) {
-                console.error(err);
-              }
-            }
       - name: "Setup Java"
         uses: actions/setup-java@v4
         with:
