@@ -24,8 +24,7 @@ jobs:
         with:
           retries: 3
           script: |
-                    console.log('::notice::Tag name: ${{ steps.repo-info.outputs.version }}')
-            const result = await github.rest.git.updateRef({
+            await github.rest.git.updateRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: 'refs/tags/nightly',
@@ -39,8 +38,7 @@ jobs:
                 return
                 throw error
               }
-              console.log('::error::Tag creation failed with error ' + error.status)
-              const result = await github.rest.git.createRef({
+              await github.rest.git.createRef({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 ref: 'refs/tags/nightly',
