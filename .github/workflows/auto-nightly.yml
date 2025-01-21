@@ -1,5 +1,5 @@
 ---
-# SPDX-FileCopyrightText: (c) 2025  ale5000
+# SPDX-FileCopyrightText: (c) 2025 ale5000
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: "Auto-nightly"
@@ -58,7 +58,7 @@ jobs:
               repo: context.repo.repo,
               tag: 'nightly'
             }).catch(response => response);
-            if(response.status >= 200 && response.status < 300 && response.data && response.data.id) {
+            if(response && response.status >= 200 && response.status < 300 && response.data && response.data.tag_name === 'nightly' && response.data.id) {
               await github.rest.repos.deleteRelease({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
