@@ -18,6 +18,18 @@ jobs:
     steps:
       - name: "Checkout sources"
         uses: actions/checkout@v4
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            for (const id in github.rest.git) {
+              try {
+                if (typeof(github.rest.git[id]) === "function") {
+                  console.log(id);
+                }
+              } catch (err) {
+                console.error(err);
+              }
+            }
       - name: "Setup Java"
         uses: actions/setup-java@v4
         with:
