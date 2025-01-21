@@ -18,18 +18,6 @@ jobs:
     steps:
       - name: "Checkout sources"
         uses: actions/checkout@v4
-      - uses: actions/github-script@v6
-        with:
-          script: |
-            for (const id in github.rest.repos) {
-              try {
-                if (typeof(github.rest.repos[id]) === "function") {
-                  console.log(id);
-                }
-              } catch (err) {
-                console.error(err);
-              }
-            }
       - name: "Setup Java"
         uses: actions/setup-java@v4
         with:
@@ -64,6 +52,23 @@ jobs:
         with:
           retries: 3
           script: |
+            const response = await github.rest.git.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/nightly'
+            }).catch(response => response)
+            console.log(response.status)
+            console.log(response.message)
+            console.log(response.id)
+            console.log('---')
+            const response = await github.rest.git.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/nightlyX'
+            }).catch(response => response)
+            console.log(response.status)
+            console.log(response.message)
+            return
             github.rest.git.deleteRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
