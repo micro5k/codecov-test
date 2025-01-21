@@ -31,12 +31,6 @@ jobs:
               sha: context.sha
             }).catch(error => {
               if(error.status !== 422 || error.message !== 'Reference does not exist') throw error
-              github.rest.git.createRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: 'refs/tags/nightly',
-                sha: context.sha
-              })
             })
       - name: "Setup Java"
         uses: actions/setup-java@v4
