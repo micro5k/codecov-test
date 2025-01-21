@@ -31,6 +31,9 @@ jobs:
         shell: bash
         run: |
           ### Building nightly...
+          echo "${{ github.sha }}"
+          git rev-parse --short HEAD
+          git rev-parse --short main
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
       - name: "ZIP info"
         run: |
