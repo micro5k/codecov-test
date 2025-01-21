@@ -61,7 +61,6 @@ jobs:
           retries: 3
           script: |
             /* jshint esversion: 6 */
-            throw new Error('Unknown error.')
             const response = await github.rest.repos.getReleaseByTag({
               owner: context.repo.owner,
               repo: context.repo.repo,
