@@ -63,7 +63,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "Nightly build"
-          tag_name: "nightlyX"
+          tag_name: "nightly"
           body: ""
           append_body: false
           generate_release_notes: false
