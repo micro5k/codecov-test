@@ -32,6 +32,7 @@ Release
 .. image:: https://img.shields.io/github/v/release/micro5k/microg-unofficial-installer.svg?cacheSeconds=3600
    :alt: GitHub release
    :target: docs/INSTRUCTIONS.rst
+
 .. image:: ../../actions/workflows/auto-nightly.yml/badge.svg
    :alt: GitHub nightly
    :target: ../../releases/tag/nightly
@@ -49,7 +50,7 @@ See `here <docs/INSTRUCTIONS.rst>`_ for the instructions.
 
 Copyright
 ---------
-© 2016-2019, 2021-2024 ale5000
+© 2016-2019, 2021-2025 ale5000
 
 
 Code analysis
