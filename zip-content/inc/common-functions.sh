@@ -265,7 +265,7 @@ _ensure_mountpoint_exist()
 
 _manual_partition_mount()
 {
-  local _backup_ifs _path _block _found
+  local _backup_ifs _path _block _found _curr_mp_list
   unset LAST_MOUNTPOINT
   _backup_ifs="${IFS:-}"
   IFS="${NL:?}"
@@ -293,10 +293,12 @@ _manual_partition_mount()
   fi
 
   if test "${_found:?}" != 'false'; then
+    _curr_mp_list=''
     for _path in ${2?}; do
       test -n "${_path?}" || continue
       _ensure_mountpoint_exist "${_path:?}" || continue
       _path="$(_canonicalize "${_path:?}")"
+      _curr_mp_list="${_curr_mp_list?}${_curr_mp_list:+, }${_path:?}"
 
       umount 2> /dev/null "${_path:?}" || true
       if _mount_helper '-o' 'rw' "${_block:?}" "${_path:?}"; then
@@ -307,7 +309,7 @@ _manual_partition_mount()
       fi
     done
 
-    ui_warning 'Not mounted'
+    ui_warning "Not mounted => ${_curr_mp_list?}"
   fi
 
   IFS="${_backup_ifs:-}"
@@ -1151,7 +1153,7 @@ get_free_disk_space_of_partition()
 
   if _stat_result="$(stat 2> /dev/null -f -c '%a * %S' -- "${1:?}")"; then
     : # OK
-  elif test -n "${DEVICE_STAT?}" && _stat_result="$(PATH="${PREVIOUS_PATH:?}" "${DEVICE_STAT:?}" 2> /dev/null -f -c '%a * %S' -- "${1:?}")"; then
+  elif test -n "${DEVICE_STAT?}" && _stat_result="$(PATH="${PREVIOUS_PATH:?}" "${DEVICE_STAT:?}" -f -c '%a * %S' -- "${1:?}")"; then
     : # OK
   else
     _stat_result=''
@@ -2158,12 +2160,22 @@ _find_hardware_keys()
     INPUT_CODE_POWER='116'
     INPUT_CODE_HOME='102'
 
+    # Example file:
+    ## key 115 VOLUME_UP
+    ## key 114 VOLUME_DOWN
+    ## key 116 POWER
+    ## key 102 HOME
+    ## key 217 ASSIST
+    ## key 528 FOCUS
+    ## key 766 CAMERA
+    ## key 689 AI
+
     if test -e "${SYS_PATH:?}/usr/keylayout/${INPUT_DEVICE_NAME:?}.kl"; then
       while IFS=' ' read -r key_type key_code key_name _; do
         if test "${key_type?}" != 'key'; then continue; fi
 
         if test -z "${key_name?}" || test -z "${key_code?}"; then
-          ui_warning "Missing key code, debug info: '${key_type:-}' '${key_code:-}' '${key_name:-}'"
+          ui_warning "Missing key code, debug info: '${key_type?}' '${key_code?}' '${key_name?}'"
           continue
         fi
 
@@ -2172,8 +2184,13 @@ _find_hardware_keys()
           'VOLUME_DOWN') INPUT_CODE_VOLUME_DOWN="${key_code:?}" ;;
           'POWER') INPUT_CODE_POWER="${key_code:?}" ;;
           'HOME') INPUT_CODE_HOME="${key_code:?}" ;;
-          *) ui_debug "Unknown key: ${key_name:-}" ;;
+          'ASSIST' | 'FOCUS' | 'CAMERA' | 'AI') : ;;
+          *)
+            ui_debug "Unknown key: ${key_name?}"
+            continue
+            ;;
         esac
+        if test "${DEBUG_LOG_ENABLED:?}" -eq 1; then ui_debug "${key_name?} found at ${key_code?}"; fi
       done 0< "${SYS_PATH:?}/usr/keylayout/${INPUT_DEVICE_NAME:?}.kl" || ui_warning "Failed parsing '${SYS_PATH:-}/usr/keylayout/${INPUT_DEVICE_NAME:-}.kl'"
     else
       ui_debug "Missing keylayout: '${SYS_PATH:-}/usr/keylayout/${INPUT_DEVICE_NAME:-}.kl'"
@@ -2189,10 +2206,17 @@ kill_pid_from_file()
 {
   local _pid
 
-  if test -e "${TMP_PATH:?}/${1:?}" && _pid="$(cat "${TMP_PATH:?}/${1:?}")" && test -n "${_pid?}"; then
-    if test "${DEBUG_LOG_ENABLED:?}" -eq 1; then ui_debug "Killing: ${_pid:-}"; fi
-    kill -s 'KILL' "${_pid:?}" || true
+  test -e "${TMP_PATH:?}/${1:?}" || {
+    ui_debug "File with PID to kill is missing: ${1-}"
+    return
+  }
+
+  if _pid="$(cat "${TMP_PATH:?}/${1:?}")" && test -n "${_pid?}"; then
+    #if test "${DEBUG_LOG_ENABLED:?}" -eq 1; then ui_debug "Killing: ${_pid-}"; fi
+    kill -s 'KILL' "${_pid:?}" || :
     kill 2> /dev/null "${_pid:?}" & # Since the above command may not work in some cases, keep this as fallback
+  else
+    ui_debug "Not killing: ${_pid-}"
   fi
 
   delete_temp "${1:?}"
