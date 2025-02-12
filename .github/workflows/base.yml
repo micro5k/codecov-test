@@ -34,10 +34,9 @@ jobs:
         shell: bash
         run: |
           # Executing code coverage...
-          workspace_path='${{ github.workspace }}'; readonly workspace_path
           export BUILD_TYPE=oss
           #sudo apt-get -qq -y install moreutils 1>/dev/null
-          bashcov "${workspace_path:?}/build.sh"  # To timestamp the output pipe it to: TZ=UTC ts '[%H:%M:%S]'
+          bashcov '${{ github.workspace }}/build.sh' # To timestamp the output pipe it to: TZ=UTC ts '[%H:%M:%S]'
       - name: "Testing"
         if: "${{ steps.build.outputs.ZIP_BUILD_TYPE_SUPPORTED == 'true' }}"
         shell: bash
@@ -46,20 +45,20 @@ jobs:
           echo '==========================='
           echo 'TESTING OF ZIP INSTALLATION'
           echo '==========================='
-          bashcov "${workspace_path:?}/recovery-simulator/recovery.sh" '${{ steps.build.outputs.ZIP_FOLDER }}/${{ steps.build.outputs.ZIP_FILENAME }}'
+          bashcov '${{ github.workspace }}/recovery-simulator/recovery.sh' '${{ steps.build.outputs.ZIP_FOLDER }}/${{ steps.build.outputs.ZIP_FILENAME }}'
           printf '\n'
           echo '==============='
           echo 'RECOVERY OUTPUT'
           echo '==============='
-          if test -e "${workspace_path:?}/recovery-simulator/output/recovery-output.log"; then
-            cat "${workspace_path:?}/recovery-simulator/output/recovery-output.log"
+          if test -e '${{ github.workspace }}/recovery-simulator/output/recovery-output.log'; then
+            cat '${{ github.workspace }}/recovery-simulator/output/recovery-output.log'
           fi
           printf '\n'
           echo '==============='
           echo 'INSTALLED FILES'
           echo '==============='
-          if test -e "${workspace_path:?}/recovery-simulator/output/installed-files.log"; then
-            cat "${workspace_path:?}/recovery-simulator/output/installed-files.log"
+          if test -e '${{ github.workspace }}/recovery-simulator/output/installed-files.log'; then
+            cat '${{ github.workspace }}/recovery-simulator/output/installed-files.log'
           fi
       - name: "Upload coverage reports to Codacy"
         if: "${{ false && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && github.repository_owner == 'micro5k' }}"
