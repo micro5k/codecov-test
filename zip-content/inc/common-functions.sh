@@ -35,7 +35,10 @@ if test -z "${ZIPFILE:-}" || test -z "${TMP_PATH:-}" || test -z "${RECOVERY_PIPE
   exit 90
 fi
 
-mkdir -p "${TMP_PATH:?}/func-tmp" || ui_error 'Failed to create the functions temp folder'
+mkdir -p "${TMP_PATH:?}/func-tmp" || {
+  echo 'Failed to create the functions temp folder'
+  exit 90
+}
 
 readonly ROLLBACK_TEST='false'
 readonly NL='
@@ -74,9 +77,12 @@ _detect_slot()
 
 _mount_helper()
 {
-  mount "${@}" 2> /dev/null || {
-    test -n "${DEVICE_MOUNT:-}" && "${DEVICE_MOUNT:?}" -t 'auto' "${@}"
-  } || return "${?}"
+  {
+    test -n "${DEVICE_MOUNT-}" && PATH="${PREVIOUS_PATH:?}" "${DEVICE_MOUNT:?}" 2> /dev/null "${@}"
+  } ||
+    mount "${@}" ||
+    return "${?}"
+
   return 0
 }
 
@@ -128,7 +134,7 @@ _mount_and_verify_system_partition()
     test -n "${_path?}" || continue
 
     case "${_path:?}" in
-      '/mnt/'* | "${TMP_PATH:?}/"*) continue ;; # Note: These paths can only be mounted manually (example: /mnt/system)
+      '/mnt'/* | "${TMP_PATH:?}"/*) continue ;; # NOTE: These paths can only be mounted manually (example: /mnt/system)
       *) ;;
     esac
 
@@ -255,12 +261,18 @@ _ensure_mountpoint_exist()
 {
   if test -e "${1:?}"; then return 0; fi
 
-  ui_debug "Creating mountpoint '${1?}'..."
-  mkdir -p "${1:?}" || {
-    ui_warning "Failed to create mountpoint '${1?}'"
-    return 1
-  }
-  set_perm 0 0 0755 "${1:?}"
+  case "${1:?}" in
+    "${TMP_PATH:?}"/*)
+      ui_debug "Creating mountpoint '${1?}'..."
+      if mkdir -p "${1:?}" && set_perm 0 0 0755 "${1:?}"; then
+        return 0
+      fi
+      ;;
+    *) ;;
+  esac
+
+  ui_warning "Invalid mountpoint '${1?}'"
+  return 1
 }
 
 _manual_partition_mount()
@@ -273,6 +285,7 @@ _manual_partition_mount()
   _found='false'
   if test -e '/dev/block/mapper'; then
     for _path in ${1?}; do
+      test -n "${_path?}" || continue
       if test -e "/dev/block/mapper/${_path:?}"; then
         _block="$(_canonicalize "/dev/block/mapper/${_path:?}")"
         ui_msg "Found 'mapper/${_path:-}' block at: ${_block:-}"
@@ -284,6 +297,7 @@ _manual_partition_mount()
 
   if test "${_found:?}" = 'false' && test -e '/sys/dev/block'; then
     for _path in ${1?}; do
+      test -n "${_path?}" || continue
       if _block="$(_find_block "${_path:?}")"; then
         ui_msg "Found '${_path:-}' block at: ${_block:-}"
         _found='true'
@@ -292,24 +306,25 @@ _manual_partition_mount()
     done
   fi
 
+  _curr_mp_list=''
   if test "${_found:?}" != 'false'; then
-    _curr_mp_list=''
     for _path in ${2?}; do
       test -n "${_path?}" || continue
       _ensure_mountpoint_exist "${_path:?}" || continue
       _path="$(_canonicalize "${_path:?}")"
       _curr_mp_list="${_curr_mp_list?}${_curr_mp_list:+, }${_path:?}"
 
-      umount 2> /dev/null "${_path:?}" || true
-      if _mount_helper '-o' 'rw' "${_block:?}" "${_path:?}"; then
+      umount 2> /dev/null "${_path:?}" || :
+      if _mount_helper "${_block:?}" "${_path:?}"; then
         IFS="${_backup_ifs:-}"
-        ui_debug "Mounted: ${_path?}"
         LAST_MOUNTPOINT="${_path:?}"
         return 0
       fi
     done
 
     ui_warning "Not mounted => ${_curr_mp_list?}"
+  else
+    ui_warning "Not found => ${1?}"
   fi
 
   IFS="${_backup_ifs:-}"
@@ -351,8 +366,8 @@ _find_and_mount_system()
 
     if _mount_and_verify_system_partition "${_sys_mountpoint_list?}"; then
       : # Mounted and found
-    elif _manual_partition_mount "system${SLOT:-}${NL:?}system${NL:?}FACTORYFS${NL:?}" "${_sys_mountpoint_list?}" && _verify_system_partition "${_sys_mountpoint_list?}"; then
-      : # Mounted and found
+    elif _manual_partition_mount "${SLOT:+system}${SLOT-}${NL:?}system${NL:?}FACTORYFS${NL:?}" "${_sys_mountpoint_list?}" && test -n "${LAST_MOUNTPOINT?}" && _verify_system_partition "${_sys_mountpoint_list?}"; then
+      ui_debug "Mounted: ${LAST_MOUNTPOINT?}" # Mounted and found
     else
       deinitialize
 
@@ -370,6 +385,70 @@ _find_and_mount_system()
   fi
 
   readonly SYS_MOUNTPOINT SYS_PATH
+}
+
+mount_partition_if_exist()
+{
+  local _backup_ifs _partition_name _block_search_list _raw_mp_list _mp_list _mp
+  unset LAST_MOUNTPOINT
+  LAST_PARTITION_MUST_BE_UNMOUNTED=0
+
+  _partition_name="${2:?}"
+  _block_search_list="${1:?}"
+  _raw_mp_list="/mnt/${2:?}${NL:?}${3-}${NL:?}/${2:?}${NL:?}"
+
+  _backup_ifs="${IFS-}"
+  IFS="${NL:?}"
+
+  _mp_list=''
+  for _mp in ${_raw_mp_list?}; do
+    if test -n "${_mp?}" && test -e "${_mp:?}"; then
+      _mp="$(_canonicalize "${_mp:?}")"
+      _mp_list="${_mp_list?}${_mp:?}${NL:?}"
+    fi
+  done
+  unset _raw_mp_list
+  set -f || :
+  # shellcheck disable=SC2086 # Word splitting is intended
+  set -- ${_mp_list?} || ui_error "Failed expanding \${_mp_list} inside mount_partition_if_exist()"
+  set +f || :
+
+  IFS="${_backup_ifs?}"
+
+  test -n "${_mp_list?}" || return 1 # No usable mountpoint found
+
+  ui_debug "Checking ${_partition_name?}..."
+
+  for _mp in "${@}"; do
+    if is_mounted "${_mp:?}"; then
+      LAST_MOUNTPOINT="${_mp:?}"
+      ui_debug "Already mounted: ${LAST_MOUNTPOINT?}"
+      return 0 # Already mounted
+    fi
+  done
+
+  if _manual_partition_mount "${_block_search_list:?}" "${_mp_list:?}" && test -n "${LAST_MOUNTPOINT?}"; then
+    LAST_PARTITION_MUST_BE_UNMOUNTED=1
+    ui_debug "Mounted: ${LAST_MOUNTPOINT?}"
+    return 0 # Successfully mounted
+  fi
+
+  for _mp in "${@}"; do
+    case "${_mp:?}" in
+      '/mnt'/* | "${TMP_PATH:?}"/*) continue ;; # NOTE: These paths can only be mounted manually (example: /mnt/system)
+      *) ;;
+    esac
+
+    if _mount_helper "${_mp:?}"; then
+      LAST_MOUNTPOINT="${_mp:?}"
+      LAST_PARTITION_MUST_BE_UNMOUNTED=1
+      ui_debug "Mounted (2): ${LAST_MOUNTPOINT?}"
+      return 0 # Successfully mounted
+    fi
+  done
+
+  ui_warning "Mounting of ${_partition_name?} failed"
+  return 2
 }
 
 _get_local_settings()
@@ -423,12 +502,11 @@ parse_setting()
 remount_read_write_if_needed()
 {
   local _mountpoint _required
-  _mountpoint="$(_canonicalize "${1:?}")"
+  _mountpoint="${1:?}"
   _required="${2:-true}"
 
   if is_mounted "${_mountpoint:?}" && is_mounted_read_only "${_mountpoint:?}"; then
     ui_msg "INFO: The '${_mountpoint:-}' mount point is read-only, it will be remounted"
-    ui_msg_empty_line
     remount_read_write "${_mountpoint:?}" || {
       if test "${_required:?}" = 'true'; then
         ui_error "Remounting of '${_mountpoint:-}' failed"
@@ -439,6 +517,7 @@ remount_read_write_if_needed()
       fi
     }
   fi
+  return 0
 }
 
 is_string_starting_with()
@@ -610,21 +689,28 @@ display_info()
   ui_msg "Dynamic partitions: ${DYNAMIC_PARTITIONS:?}"
   ui_msg "Current slot: ${SLOT:-no slot}"
   ui_msg "Recov. fake system: ${RECOVERY_FAKE_SYSTEM:?}"
+  ui_msg "Fake signature perm.: ${FAKE_SIGN_PERMISSION:?}"
   ui_msg_empty_line
   ui_msg "System mount point: ${SYS_MOUNTPOINT:?}"
   ui_msg "System path: ${SYS_PATH:?}"
-  ui_msg "Priv-app path: ${PRIVAPP_PATH:?}"
-  ui_msg_empty_line
-  ui_msg "Android root ENV: ${ANDROID_ROOT:-}"
-  ui_msg "Fake signature: ${FAKE_SIGN_PERMISSION:?}"
+  ui_msg "Priv-app dir: ${PRIVAPP_DIRNAME:?}"
+  #ui_msg "Android root ENV: ${ANDROID_ROOT-}"
   ui_msg "$(write_separator_line "${#MODULE_NAME}" '-' || true)"
 }
 
 initialize()
 {
   local _raw_arch_list
+
   UNMOUNT_SYSTEM=0
-  DATA_INIT_STATUS=0
+  UNMOUNT_PRODUCT=0
+  UNMOUNT_VENDOR=0
+  UNMOUNT_SYS_EXT=0
+  UNMOUNT_ODM=0
+  UNMOUNT_DATA=0
+  DATA_PATH='/data'
+  PRODUCT_WRITABLE='false'
+  VENDOR_WRITABLE='false'
 
   # Make sure that the commands are still overridden here (most shells don't have the ability to export functions)
   if test "${TEST_INSTALL:-false}" != 'false' && test -f "${RS_OVERRIDE_SCRIPT:?}"; then
@@ -697,7 +783,7 @@ initialize()
     *) ;;
   esac
 
-  if is_string_starting_with 'sdk_google_phone_' "${BUILD_PRODUCT?}" || is_valid_prop "$(simple_getprop 'ro.leapdroid.version' || true)"; then
+  if is_string_starting_with 'sdk_google_phone_' "${BUILD_PRODUCT?}" || is_valid_prop "$(simple_getprop 'ro.leapdroid.version' || :)"; then
     IS_EMU='true'
   fi
 
@@ -778,39 +864,55 @@ initialize()
     }
   fi
 
-  if test ! -w "${SYS_PATH:?}"; then
-    ui_error "The '${SYS_PATH:-}' partition is NOT writable"
+  if mount_partition_if_exist "${SLOT:+product}${SLOT-}${NL:?}product${NL:?}" 'product'; then
+    PRODUCT_PATH="${LAST_MOUNTPOINT:?}"
+    UNMOUNT_PRODUCT="${LAST_PARTITION_MUST_BE_UNMOUNTED:?}"
+    remount_read_write_if_needed "${LAST_MOUNTPOINT:?}" false && PRODUCT_WRITABLE='true'
+  fi
+  if mount_partition_if_exist "${SLOT:+vendor}${SLOT-}${NL:?}vendor${NL:?}" 'vendor'; then
+    VENDOR_PATH="${LAST_MOUNTPOINT:?}"
+    UNMOUNT_VENDOR="${LAST_PARTITION_MUST_BE_UNMOUNTED:?}"
+    remount_read_write_if_needed "${LAST_MOUNTPOINT:?}" false && VENDOR_WRITABLE='true'
+  fi
+  if mount_partition_if_exist "${SLOT:+system_ext}${SLOT-}${NL:?}system_ext${NL:?}" 'system_ext'; then
+    SYS_EXT_PATH="${LAST_MOUNTPOINT:?}"
+    UNMOUNT_SYS_EXT="${LAST_PARTITION_MUST_BE_UNMOUNTED:?}"
+    remount_read_write_if_needed "${LAST_MOUNTPOINT:?}" false
+  fi
+  if mount_partition_if_exist "${SLOT:+odm}${SLOT-}${NL:?}odm${NL:?}" 'odm'; then
+    ODM_PATH="${LAST_MOUNTPOINT:?}"
+    UNMOUNT_ODM="${LAST_PARTITION_MUST_BE_UNMOUNTED:?}"
+    remount_read_write_if_needed "${LAST_MOUNTPOINT:?}" false
   fi
 
-  if test "${ANDROID_DATA:-}" = '/data'; then ANDROID_DATA=''; fi # Avoid double checks
-
-  DATA_PATH="$(_canonicalize "${ANDROID_DATA:-/data}")"
-  if test ! -e "${DATA_PATH:?}/data" && ! is_mounted "${DATA_PATH:?}"; then
-    ui_debug "Mounting data..."
-    unset LAST_MOUNTPOINT
-    _mount_helper '-o' 'rw' "${DATA_PATH:?}" || _manual_partition_mount "userdata${NL:?}DATAFS${NL:?}" "${ANDROID_DATA:-}${NL:?}/data${NL:?}" || true
-    if test -n "${LAST_MOUNTPOINT:-}"; then DATA_PATH="${LAST_MOUNTPOINT:?}"; fi
-
-    if is_mounted "${DATA_PATH:?}"; then
-      DATA_INIT_STATUS=1
-      ui_debug "Mounted: ${DATA_PATH:-}"
-    else
-      ui_warning "The data partition cannot be mounted, so updates of installed / removed apps cannot be automatically deleted and their Dalvik cache cannot be automatically cleaned. I suggest to manually do a factory reset after flashing this ZIP."
-    fi
+  if test "${ANDROID_DATA-}" = '/data'; then ANDROID_DATA=''; fi # Avoid double checks
+  if mount_partition_if_exist "userdata${NL:?}DATAFS${NL:?}" 'data' "${ANDROID_DATA-}"; then
+    DATA_PATH="${LAST_MOUNTPOINT:?}"
+    UNMOUNT_DATA="${LAST_PARTITION_MUST_BE_UNMOUNTED:?}"
+    remount_read_write_if_needed "${LAST_MOUNTPOINT:?}" true
+  else
+    ui_warning "The data partition cannot be mounted, so updates of installed / removed apps cannot be automatically deleted and their Dalvik cache cannot be automatically cleaned. I suggest to manually do a factory reset after flashing this ZIP."
   fi
   readonly DATA_PATH
+  unset ANDROID_DATA
 
-  mount_extra_partitions_silent
-  if test -e '/product'; then remount_read_write_if_needed '/product' false; fi
-  if test -e '/vendor'; then remount_read_write_if_needed '/vendor' false; fi
-  if test -e '/system_ext'; then remount_read_write_if_needed '/system_ext' false; fi
+  DEST_PATH="${SYS_PATH:?}"
+  readonly DEST_PATH
+
+  if test ! -w "${SYS_PATH:?}"; then
+    ui_error "The '${SYS_PATH?}' partition is NOT writable"
+  fi
+
+  if test "${DEST_PATH:?}" != "${SYS_PATH:?}" && test ! -w "${DEST_PATH:?}"; then
+    ui_error "The '${DEST_PATH?}' partition is NOT writable"
+  fi
 
   # Display header
-  ui_msg "$(write_separator_line "${#MODULE_NAME}" '-' || true)"
+  ui_msg "$(write_separator_line "${#MODULE_NAME}" '-' || :)"
   ui_msg "${MODULE_NAME:?}"
   ui_msg "${MODULE_VERSION:?}"
   ui_msg "(by ${MODULE_AUTHOR:?})"
-  ui_msg "$(write_separator_line "${#MODULE_NAME}" '-' || true)"
+  ui_msg "$(write_separator_line "${#MODULE_NAME}" '-' || :)"
 
   # shellcheck disable=SC2312
   _raw_arch_list=','"$(sys_getprop 'ro.product.cpu.abi')"','"$(sys_getprop 'ro.product.cpu.abi2')"','"$(sys_getprop 'ro.product.cpu.upgradeabi')"','"$(sys_getprop 'ro.product.cpu.abilist')"','
@@ -833,28 +935,28 @@ initialize()
   fi
 
   if test "${API:?}" -ge 19; then # KitKat or higher
-    PRIVAPP_FOLDERNAME='priv-app'
+    PRIVAPP_DIRNAME='priv-app'
   else
-    PRIVAPP_FOLDERNAME='app'
+    PRIVAPP_DIRNAME='app'
   fi
-  PRIVAPP_PATH="${SYS_PATH:?}/${PRIVAPP_FOLDERNAME:?}"
-  readonly PRIVAPP_FOLDERNAME PRIVAPP_PATH
-  export PRIVAPP_FOLDERNAME PRIVAPP_PATH
+  readonly PRIVAPP_DIRNAME
+  export PRIVAPP_DIRNAME
 
-  if test ! -e "${SYS_PATH:?}/${PRIVAPP_FOLDERNAME:?}"; then
-    ui_error "The ${PRIVAPP_FOLDERNAME?} folder does NOT exist"
+  if test ! -d "${SYS_PATH:?}/${PRIVAPP_DIRNAME:?}"; then
+    ui_error "The ${PRIVAPP_DIRNAME?} folder does NOT exist"
   fi
 
   FAKE_SIGN_PERMISSION='false'
   zip_extract_file "${SYS_PATH}/framework/framework-res.apk" 'AndroidManifest.xml' "${TMP_PATH}/framework-res"
   XML_MANIFEST="${TMP_PATH}/framework-res/AndroidManifest.xml"
   # Detect the presence of the fake signature permission
-  # Note: It won't detect it if signature spoofing doesn't require a permission, but it is still fine for our case
+  # NOTE: It won't detect it if signature spoofing doesn't require a permission, but it is still fine for our case
   if search_ascii_string_as_utf16_in_file 'android.permission.FAKE_PACKAGE_SIGNATURE' "${XML_MANIFEST}"; then
     FAKE_SIGN_PERMISSION='true'
   fi
 
   unset LAST_MOUNTPOINT
+  unset LAST_PARTITION_MUST_BE_UNMOUNTED
   unset CURRENTLY_ROLLBACKING
 }
 
@@ -865,7 +967,7 @@ deinitialize()
     rmdir -- "${TMP_PATH:?}/system_mountpoint" || ui_error 'Failed to delete the temp mountpoint'
   fi
 
-  if test "${DATA_INIT_STATUS:?}" -eq 1 && test -n "${DATA_PATH-}"; then unmount "${DATA_PATH:?}"; fi
+  if test "${UNMOUNT_DATA:?}" -eq 1 && test -n "${DATA_PATH-}"; then unmount "${DATA_PATH:?}"; fi
 }
 
 clean_previous_installations()
@@ -941,10 +1043,10 @@ prepare_installation()
 
   test "${_need_newline:?}" = 'false' || ui_debug ''
 
-  if test "${PRIVAPP_FOLDERNAME:?}" != 'priv-app' && test -e "${TMP_PATH:?}/files/priv-app"; then
-    ui_debug "  Merging priv-app folder with ${PRIVAPP_FOLDERNAME?} folder..."
-    mkdir -p -- "${TMP_PATH:?}/files/${PRIVAPP_FOLDERNAME:?}" || ui_error "Failed to create the dir '${TMP_PATH?}/files/${PRIVAPP_FOLDERNAME?}'"
-    copy_dir_content "${TMP_PATH:?}/files/priv-app" "${TMP_PATH:?}/files/${PRIVAPP_FOLDERNAME:?}"
+  if test "${PRIVAPP_DIRNAME:?}" != 'priv-app' && test -e "${TMP_PATH:?}/files/priv-app"; then
+    ui_debug "  Merging priv-app folder with ${PRIVAPP_DIRNAME?} folder..."
+    mkdir -p -- "${TMP_PATH:?}/files/${PRIVAPP_DIRNAME:?}" || ui_error "Failed to create the dir '${TMP_PATH?}/files/${PRIVAPP_DIRNAME?}'"
+    copy_dir_content "${TMP_PATH:?}/files/priv-app" "${TMP_PATH:?}/files/${PRIVAPP_DIRNAME:?}"
     delete_temp "files/priv-app"
   fi
 
@@ -1167,6 +1269,17 @@ get_free_disk_space_of_partition()
   return 1
 }
 
+display_free_space()
+{
+  if test -n "${2?}" && test "${2:?}" -ge 0; then
+    ui_msg "Free space on ${1?}: $(convert_bytes_to_mb "${2:?}" || :) MB ($(convert_bytes_to_human_readable_format 2> /dev/null "${2:?}" || :))"
+    return 0
+  fi
+
+  ui_warning "Unable to get free disk space, output for '${1?}' => $(stat -f -c '%a * %S' -- "${1:?}" || :)"
+  return 1
+}
+
 get_disk_space_usage_of_file_or_folder()
 {
   local _result
@@ -1233,14 +1346,13 @@ verify_disk_space()
     _needed_space_bytes='-1'
   fi
 
-  if _free_space_bytes="$(get_free_disk_space_of_partition "${1:?}")" && test -n "${_free_space_bytes?}"; then
-    ui_msg "Free disk space: $(convert_bytes_to_mb "${_free_space_bytes:?}" || :) MB ($(convert_bytes_to_human_readable_format "${_free_space_bytes:?}" || :))"
-  else
-    ui_warning "Unable to get free disk space, output for '${1?}' => $(stat -f -c '%a * %S' -- "${1:?}" || :)"
-    _free_space_bytes='-1'
-  fi
+  _free_space_bytes="$(get_free_disk_space_of_partition "${1:?}")" || _free_space_bytes='-1'
+  display_free_space "${1:?}" "${_free_space_bytes?}" || :
 
-  if test "${_needed_space_bytes:?}" -gt 0 && test "${_free_space_bytes:?}" -ge 0; then
+  if test "${PRODUCT_WRITABLE:?}" = 'true'; then display_free_space "${PRODUCT_PATH:?}" "$(get_free_disk_space_of_partition "${PRODUCT_PATH:?}" || :)"; fi
+  if test "${VENDOR_WRITABLE:?}" = 'true'; then display_free_space "${VENDOR_PATH:?}" "$(get_free_disk_space_of_partition "${VENDOR_PATH:?}" || :)"; fi
+
+  if test "${_needed_space_bytes:?}" -ge 0 && test "${_free_space_bytes:?}" -ge 0; then
     : # OK
   else
     ui_msg_empty_line
@@ -1255,23 +1367,23 @@ verify_disk_space()
 
 perform_secure_copy_to_device()
 {
-  if test ! -e "${TMP_PATH:?}/files/${1:?}"; then return 0; fi
+  if test ! -d "${TMP_PATH:?}/files/${1:?}"; then return 0; fi
   local _error_text
 
   ui_debug "  Copying the '${1?}' folder to the device..."
-  create_dir "${SYS_PATH:?}/${1:?}"
+  create_dir "${DEST_PATH:?}/${1:?}"
   _error_text=''
 
   if
     {
-      cp 2> /dev/null -r -p -f -- "${TMP_PATH:?}/files/${1:?}"/* "${SYS_PATH:?}/${1:?}/" ||
-        _error_text="$(cp 2>&1 -r -p -f -- "${TMP_PATH:?}/files/${1:?}"/* "${SYS_PATH:?}/${1:?}/")"
+      cp 2> /dev/null -r -p -f -- "${TMP_PATH:?}/files/${1:?}"/* "${DEST_PATH:?}/${1:?}/" ||
+        _error_text="$(cp 2>&1 -r -p -f -- "${TMP_PATH:?}/files/${1:?}"/* "${DEST_PATH:?}/${1:?}/")"
     } && _custom_rollback "${1:?}"
   then
     return 0
   elif _is_free_space_error "${_error_text?}"; then
     while _do_rollback_last_app "${1:?}"; do
-      if ! _something_exists "${TMP_PATH:?}/files/${1:?}"/* || cp 2> /dev/null -r -p -f -- "${TMP_PATH:?}/files/${1:?}"/* "${SYS_PATH:?}/${1:?}/"; then
+      if ! _something_exists "${TMP_PATH:?}/files/${1:?}"/* || cp 2> /dev/null -r -p -f -- "${TMP_PATH:?}/files/${1:?}"/* "${DEST_PATH:?}/${1:?}/"; then
         if test -n "${_error_text?}"; then
           ui_recovered_error "$(printf '%s\n' "${_error_text:?}" | head -n 1 || true)"
         else
@@ -1290,13 +1402,9 @@ perform_secure_copy_to_device()
   df 2> /dev/null -h -T -- "${SYS_MOUNTPOINT:?}" || df -h -- "${SYS_MOUNTPOINT:?}" || :
   ui_debug ''
 
-  local _ret_code _free_space_bytes
+  display_free_space "${DEST_PATH:?}" "$(get_free_disk_space_of_partition "${DEST_PATH:?}" || :)"
 
-  if _free_space_bytes="$(get_free_disk_space_of_partition "${SYS_PATH:?}")" && test -n "${_free_space_bytes?}"; then
-    ui_debug "Free disk space: $(convert_bytes_to_mb "${_free_space_bytes:?}" || :) MB ($(convert_bytes_to_human_readable_format "${_free_space_bytes:?}" || :))"
-    ui_debug ''
-  fi
-
+  local _ret_code
   _ret_code=5
   ! _is_free_space_error "${_error_text?}" || _ret_code=28
 
@@ -1310,7 +1418,7 @@ perform_installation()
 {
   ui_msg_empty_line
 
-  if ! verify_disk_space "${SYS_PATH:?}"; then
+  if ! verify_disk_space "${DEST_PATH:?}"; then
     ui_msg_empty_line
     ui_warning "There is NOT enough free space available, but let's try anyway"
   fi
@@ -1326,6 +1434,23 @@ perform_installation()
 
   set_perm 0 0 0640 "${TMP_PATH:?}/files/etc/zips/${MODULE_ID:?}.prop"
   perform_secure_copy_to_device 'etc/zips'
+  perform_secure_copy_to_device 'etc/permissions'
+
+  local _entry
+
+  ui_debug "  Copying the 'etc' folder to the device..."
+  for _entry in "${TMP_PATH:?}/files/etc"/*; do
+    if test -f "${_entry:?}"; then copy_file "${_entry:?}" "${DEST_PATH:?}/etc"; fi
+  done
+
+  for _entry in "${TMP_PATH:?}/files/etc"/*; do
+    if test -d "${_entry:?}"; then
+      case "${_entry:?}" in
+        */'etc/zips' | */'etc/permissions') ;;
+        *) perform_secure_copy_to_device "${_entry#"${TMP_PATH:?}/files/"}" ;;
+      esac
+    fi
+  done
 
   if test "${API:?}" -lt 21; then
     if test "${CPU64}" != false; then
@@ -1336,13 +1461,9 @@ perform_installation()
     fi
   fi
 
-  perform_secure_copy_to_device 'etc/permissions'
   perform_secure_copy_to_device 'framework'
-  perform_secure_copy_to_device 'etc/default-permissions'
-  perform_secure_copy_to_device 'etc/org.fdroid.fdroid'
-  if test "${PRIVAPP_FOLDERNAME:?}" != 'app'; then perform_secure_copy_to_device "${PRIVAPP_FOLDERNAME:?}"; fi
+  if test "${PRIVAPP_DIRNAME:?}" != 'app'; then perform_secure_copy_to_device "${PRIVAPP_DIRNAME:?}"; fi
   perform_secure_copy_to_device 'app'
-  perform_secure_copy_to_device 'etc/sysconfig'
 
   if test -d "${TMP_PATH:?}/files/bin"; then
     ui_msg 'Installing utilities...'
@@ -1475,15 +1596,6 @@ validate_return_code_warning()
 }
 
 # Mounting related functions
-mount_partition_silent()
-{
-  local partition
-  partition="$(_canonicalize "${1:?}")"
-
-  mount -o 'rw' "${partition:?}" 2> /dev/null || true
-  return 0 # Never fail
-}
-
 unmount()
 {
   local partition
@@ -1493,40 +1605,19 @@ unmount()
   return 0 # Never fail
 }
 
-_mount_if_needed_silent()
-{
-  if is_mounted "${1:?}"; then return 1; fi
-
-  mount_partition_silent "${1:?}"
-  is_mounted "${1:?}"
-  return "${?}"
-}
-
-UNMOUNT_SYS_EXT=0
-UNMOUNT_PRODUCT=0
-UNMOUNT_VENDOR=0
-mount_extra_partitions_silent()
-{
-  ! _mount_if_needed_silent '/system_ext'
-  UNMOUNT_SYS_EXT="${?}"
-  ! _mount_if_needed_silent '/product'
-  UNMOUNT_PRODUCT="${?}"
-  ! _mount_if_needed_silent '/vendor'
-  UNMOUNT_VENDOR="${?}"
-
-  return 0 # Never fail
-}
-
 unmount_extra_partitions()
 {
-  if test "${UNMOUNT_SYS_EXT:?}" = '1'; then
-    unmount '/system_ext'
+  if test "${UNMOUNT_PRODUCT:?}" = '1' && test -n "${PRODUCT_PATH-}"; then
+    unmount "${PRODUCT_PATH:?}"
   fi
-  if test "${UNMOUNT_PRODUCT:?}" = '1'; then
-    unmount '/product'
+  if test "${UNMOUNT_VENDOR:?}" = '1' && test -n "${VENDOR_PATH-}"; then
+    unmount "${VENDOR_PATH:?}"
   fi
-  if test "${UNMOUNT_VENDOR:?}" = '1'; then
-    unmount '/vendor'
+  if test "${UNMOUNT_SYS_EXT:?}" = '1' && test -n "${SYS_EXT_PATH-}"; then
+    unmount "${SYS_EXT_PATH:?}"
+  fi
+  if test "${UNMOUNT_ODM:?}" = '1' && test -n "${ODM_PATH-}"; then
+    unmount "${ODM_PATH:?}"
   fi
 
   return 0 # Never fail
@@ -1588,7 +1679,7 @@ is_substring()
 
 replace_string_global()
 {
-  printf '%s' "${1:?}" | sed -e "s@${2:?}@${3:?}@g" || return "${?}" # Note: pattern and replacement cannot contain @
+  printf '%s' "${1:?}" | sed -e "s@${2:?}@${3:?}@g" || return "${?}" # NOTE: pattern and replacement cannot contain @
 }
 
 replace_slash_with_at()
@@ -1737,7 +1828,7 @@ copy_dir_content()
 copy_file()
 {
   create_dir "$2"
-  cp -pf "$1" "$2"/ || ui_error "Failed to copy the file '$1' to '$2'" 99
+  cp -p -f -- "$1" "$2"/ || ui_error "Failed to copy the file '$1' to '$2'" 99
 }
 
 move_file()
@@ -2212,11 +2303,10 @@ kill_pid_from_file()
   }
 
   if _pid="$(cat "${TMP_PATH:?}/${1:?}")" && test -n "${_pid?}"; then
-    #if test "${DEBUG_LOG_ENABLED:?}" -eq 1; then ui_debug "Killing: ${_pid-}"; fi
-    kill -s 'KILL' "${_pid:?}" || :
-    kill 2> /dev/null "${_pid:?}" & # Since the above command may not work in some cases, keep this as fallback
+    #if test "${DEBUG_LOG_ENABLED:?}" -eq 1; then ui_debug "Killing: ${_pid?}"; fi
+    kill -s 'KILL' "${_pid:?}" || kill "${_pid:?}" || ui_warning "Failed to kill PID => ${_pid?}"
   else
-    ui_debug "Not killing: ${_pid-}"
+    ui_warning "Unable to read PID from => ${1?}"
   fi
 
   delete_temp "${1:?}"
@@ -2307,7 +2397,7 @@ _timeout_exit_code_remapper()
       ;;
     126) # COMMAND is found but cannot be invoked (126) - Example: missing execute permission
       ;;
-    127) # COMMAND cannot be found (127) - Note: this return value may even be used when timeout is unable to execute the COMMAND
+    127) # COMMAND cannot be found (127) - NOTE: this return value may even be used when timeout is unable to execute the COMMAND
       ui_msg_empty_line
       ui_warning 'timeout returned cmd NOT found (127)'
       return 127
