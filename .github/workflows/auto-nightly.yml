@@ -32,6 +32,8 @@ jobs:
         run: |
           # Building nightly...
           #BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
+          gradle update
+          export GRADLE_OPTS='-Dorg.gradle.warning.mode=all -Dorg.gradle.deprecation.trace=true'
           gradle buildotaoss
       - name: "ZIP info"
         run: |
