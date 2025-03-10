@@ -31,7 +31,8 @@ jobs:
         shell: bash
         run: |
           # Building nightly...
-          BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
+          #BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
+          gradle buildotaoss
       - name: "ZIP info"
         run: |
           # Retrieve informations...
