@@ -19,29 +19,34 @@ export POSIXLY_CORRECT='y'
 
 ### PREVENTIVE CHECKS ###
 
-if test -z "${BOOTMODE:-}"; then
+if test -z "${BOOTMODE-}"; then
   printf 1>&2 '%s\n' 'Missing BOOTMODE variable'
-  abort 'Missing BOOTMODE variable' 2> /dev/null || exit 1
+  abort 2> /dev/null 'Missing BOOTMODE variable'
+  exit 1
 fi
-if test -z "${OUTFD:-}" || test "${OUTFD:?}" -lt 1; then
+if test -z "${ZIPFILE-}"; then
+  printf 1>&2 '%s\n' 'Missing ZIPFILE variable'
+  abort 2> /dev/null 'Missing ZIPFILE variable'
+  exit 1
+fi
+if test -z "${TMPDIR-}" || test ! -e "${TMPDIR:?}"; then
+  printf 1>&2 '%s\n' 'The temp folder is missing (2)'
+  abort 2> /dev/null 'The temp folder is missing (2)'
+  exit 1
+fi
+if test -z "${OUTFD-}" || test "${OUTFD:?}" -lt 1; then
   printf 1>&2 '%s\n' 'Missing or invalid OUTFD variable'
-  abort 'Missing or invalid OUTFD variable' 2> /dev/null || exit 1
+  abort 2> /dev/null  'Missing or invalid OUTFD variable'
+  exit 1
 fi
 RECOVERY_PIPE="/proc/self/fd/${OUTFD:?}"
-if test -z "${ZIPFILE:-}"; then
-  printf 1>&2 '%s\n' 'Missing ZIPFILE variable'
-  abort 'Missing ZIPFILE variable' 2> /dev/null || exit 1
-fi
-if test -z "${TMPDIR:-}" || test ! -e "${TMPDIR:?}"; then
-  printf 1>&2 '%s\n' 'The temp folder is missing (2)'
-  abort 'The temp folder is missing (2)' 2> /dev/null || exit 1
-fi
+test -e "${RECOVERY_PIPE:?}" || RECOVERY_PIPE=''
 
 export BOOTMODE
-export OUTFD
-export RECOVERY_PIPE
 export ZIPFILE
 export TMPDIR
+export OUTFD
+export RECOVERY_PIPE
 export ANDROID_ROOT
 export ANDROID_DATA
 unset REPLACE
@@ -56,7 +61,7 @@ export SKIPUNZIP ASH_STANDALONE
 ### GLOBAL VARIABLES ###
 
 export DEBUG_LOG_ENABLED=0
-readonly FORCE_HW_BUTTONS="${FORCE_HW_BUTTONS:-0}"
+readonly FORCE_HW_KEYS="${FORCE_HW_KEYS:-0}"
 
 readonly RECOVERY_API_VER="${1:-}"
 if test "${4:-}" = 'zip-install'; then
@@ -75,7 +80,7 @@ else
 fi
 export RECOVERY_OUTPUT
 
-if test "${FORCE_HW_BUTTONS:?}" = '0' && test -t 0 && { # Check if STDIN (0) is valid
+if test "${FORCE_HW_KEYS:?}" = '0' && test -t 0 && { # Check if STDIN (0) is valid
   test "${ZIP_INSTALL:?}" = 'true' || test "${TEST_INSTALL:-false}" != 'false'
 }; then
   readonly INPUT_FROM_TERMINAL='true'
@@ -126,38 +131,82 @@ export KEYCHECK_ENABLED='false'
 
 ### FUNCTIONS ###
 
-ui_debug()
-{
-  printf '%s\n' "${1?}"
-}
-
-_show_text_on_recovery()
+_send_text_to_recovery()
 {
   if test "${RECOVERY_OUTPUT:?}" != 'true'; then return; fi # Nothing to do here
 
-  if test -e "${RECOVERY_PIPE:?}"; then
-    printf 'ui_print %s\nui_print\n' "${1?}" >> "${RECOVERY_PIPE:?}"
+  if test -n "${RECOVERY_PIPE?}"; then
+    printf 'ui_print %s\nui_print\n' "${1?}" 1>> "${RECOVERY_PIPE:?}"
   else
     printf 'ui_print %s\nui_print\n' "${1?}" 1>&"${OUTFD:?}"
   fi
 
-  if test "${DEBUG_LOG_ENABLED:?}" -eq 1; then printf 1>&2 '%s\n' "${1?}"; fi
+  if test "${DEBUG_LOG_ENABLED:?}" = '1'; then printf 1>&2 '%s\n' "${1?}"; fi
+}
+
+_print_text()
+{
+  if test -n "${NO_COLOR-}"; then
+    printf '%s\n' "${2?}"
+  else
+    # shellcheck disable=SC2059
+    printf "${1:?}\n" "${2?}"
+  fi
+
+  if test "${DEBUG_LOG_ENABLED:?}" = '1' && test -n "${ORIGINAL_STDERR_FD_PATH?}"; then printf '%s\n' "${2?}" 1>> "${ORIGINAL_STDERR_FD_PATH:?}"; fi
+}
+
+ui_error()
+{
+  local _error_code
+  _error_code=79
+  test -z "${2-}" || _error_code="${2:?}"
+
+  if test "${RECOVERY_OUTPUT:?}" = 'true'; then
+    _send_text_to_recovery "ERROR ${_error_code:?}: ${1:?}"
+  else
+    _print_text 1>&2 '\033[1;31m%s\033[0m' "ERROR ${_error_code:?}: ${1:?}"
+  fi
+
+  exit "${_error_code:?}"
+}
+
+ui_warning()
+{
+  if test "${RECOVERY_OUTPUT:?}" = 'true'; then
+    _send_text_to_recovery "WARNING: ${1:?}"
+  else
+    _print_text 1>&2 '\033[0;33m%s\033[0m' "WARNING: ${1:?}"
+  fi
+}
+
+ui_msg()
+{
+  if test "${RECOVERY_OUTPUT:?}" = 'true'; then
+    _send_text_to_recovery "${1:?}"
+  else
+    _print_text '%s' "${1:?}"
+  fi
+}
+
+ui_debug()
+{
+  _print_text 1>&2 '%s' "${1?}"
 }
 
 enable_debug_log()
 {
   if test "${DEBUG_LOG_ENABLED}" -eq 1; then return; fi
+  local _backup_stderr
 
   ui_debug "Creating log: ${LOG_PATH:?}"
-  _show_text_on_recovery "Creating log: ${LOG_PATH:?}"
+  _send_text_to_recovery "Creating log: ${LOG_PATH:?}"
 
   touch "${LOG_PATH:?}" || {
     export DEBUG_LOG_ENABLED=0
     ui_warning "Unable to write the log file at: ${LOG_PATH:-}"
     return
   }
-
-  export DEBUG_LOG_ENABLED=1
 
   # If they are already in use, then use alternatives
   if {
@@ -166,17 +215,32 @@ enable_debug_log()
     export ALTERNATIVE_FDS=1
     # shellcheck disable=SC3023
     exec 88>&1 89>&2 # Backup stdout and stderr
+    _backup_stderr=89
   else
     export ALTERNATIVE_FDS=0
     exec 6>&1 7>&2 # Backup stdout and stderr
+    _backup_stderr=7
   fi
+
   exec 1>> "${LOG_PATH:?}" 2>&1
+
+  export NO_COLOR=1
+  if test -e "/proc/$$/fd/${_backup_stderr:?}"; then
+    export ORIGINAL_STDERR_FD_PATH="/proc/$$/fd/${_backup_stderr:?}"
+  else
+    export ORIGINAL_STDERR_FD_PATH=''
+  fi
+  export DEBUG_LOG_ENABLED=1
 }
 
 disable_debug_log()
 {
   if test "${DEBUG_LOG_ENABLED}" -ne 1; then return; fi
+
   export DEBUG_LOG_ENABLED=0
+  unset ORIGINAL_STDERR_FD_PATH
+  unset NO_COLOR
+
   if test "${ALTERNATIVE_FDS:?}" -eq 0; then
     exec 1>&6 2>&7 # Restore stdout and stderr
     exec 6>&- 7>&-
@@ -184,38 +248,6 @@ disable_debug_log()
     exec 1>&88 2>&89 # Restore stdout and stderr
     # shellcheck disable=SC3023
     exec 88>&- 89>&-
-  fi
-}
-
-ui_error()
-{
-  ERROR_CODE=79
-  if test -n "${2:-}"; then ERROR_CODE="${2:?}"; fi
-
-  if test "${RECOVERY_OUTPUT:?}" = 'true'; then
-    _show_text_on_recovery "ERROR ${ERROR_CODE:?}: ${1:?}"
-  else
-    printf 1>&2 '\033[1;31m%s\033[0m\n' "ERROR ${ERROR_CODE:?}: ${1:?}"
-  fi
-
-  abort '' 2> /dev/null || exit "${ERROR_CODE:?}"
-}
-
-ui_warning()
-{
-  if test "${RECOVERY_OUTPUT:?}" = 'true'; then
-    _show_text_on_recovery "WARNING: ${1:?}"
-  else
-    printf 1>&2 '\033[0;33m%s\033[0m\n' "WARNING: ${1:?}"
-  fi
-}
-
-ui_msg()
-{
-  if test "${RECOVERY_OUTPUT:?}" = 'true'; then
-    _show_text_on_recovery "${1:?}"
-  else
-    printf '%s\n' "${1:?}"
   fi
 }
 
@@ -257,7 +289,7 @@ package_extract_file_may_fail()
   } ||
     {
       rm -f -- "${2:?}" || true
-      ui_warning "Failed to extract the file '${1}' from this archive"
+      ui_debug "Failed to extract the file '${1}' from this archive"
       return 1
     }
 }
@@ -342,13 +374,15 @@ fi
 set_perm_safe 0 0 0755 "${TMP_PATH:?}"
 
 PREVIOUS_PATH="${PATH:-%empty}"
+DEVICE_TWRP="$(command -v twrp)" || DEVICE_TWRP=''
 DEVICE_GETPROP="$(command -v getprop)" || DEVICE_GETPROP=''
-DEVICE_STAT="$(command -v stat)" || DEVICE_STAT=''
 DEVICE_MOUNT="$(command -v mount)" || DEVICE_MOUNT=''
+DEVICE_DUMPSYS="$(command -v dumpsys)" || DEVICE_DUMPSYS=''
+DEVICE_STAT="$(command -v stat)" || DEVICE_STAT=''
 DEVICE_PM="$(command -v pm)" || DEVICE_PM=''
 DEVICE_AM="$(command -v am)" || DEVICE_AM=''
-readonly PREVIOUS_PATH DEVICE_GETPROP DEVICE_STAT DEVICE_MOUNT DEVICE_PM DEVICE_AM
-export PREVIOUS_PATH DEVICE_GETPROP DEVICE_STAT DEVICE_MOUNT DEVICE_PM DEVICE_AM
+readonly PREVIOUS_PATH DEVICE_TWRP DEVICE_GETPROP DEVICE_MOUNT DEVICE_DUMPSYS DEVICE_STAT DEVICE_PM DEVICE_AM
+export PREVIOUS_PATH DEVICE_TWRP DEVICE_GETPROP DEVICE_MOUNT DEVICE_DUMPSYS DEVICE_STAT DEVICE_PM DEVICE_AM
 
 if test "${TEST_INSTALL:-false}" = 'false'; then
   create_dir_safe "${TMP_PATH:?}/bin"
@@ -362,32 +396,29 @@ fi
 
 ui_debug 'Parsing common settings...'
 
-_simple_getprop()
-{
-  if test -n "${DEVICE_GETPROP?}"; then
-    "${DEVICE_GETPROP:?}" "${1:?}" || return "${?}"
-  elif command -v getprop 1> /dev/null; then
-    getprop "${1:?}" || return "${?}"
-  else
-    return 1
-  fi
-}
-_get_common_setting()
+simple_getprop()
 {
   local _val
-  if _val="$(_simple_getprop "zip.common.${1:?}")" && test -n "${_val?}"; then
-    printf '%s\n' "${_val:?}"
-    return
+
+  if test -n "${DEVICE_GETPROP?}" && _val="$(PATH="${PREVIOUS_PATH:?}" "${DEVICE_GETPROP:?}" "${@}")"; then
+    :
+  elif command 1> /dev/null -v 'getprop' && _val="$(getprop "${@}")"; then
+    :
+  else
+    return 2
   fi
 
-  # Fallback to the default value
-  printf '%s\n' "${2?}"
+  test -n "${_val?}" || return 1
+  printf '%s\n' "${_val:?}"
+}
+
+_get_common_setting()
+{
+  simple_getprop "zip.common.${1:?}" ||
+    printf '%s\n' "${2?}" # Fallback to the default value
 }
 
 DEBUG_LOG="$(_get_common_setting 'DEBUG_LOG' "${DEBUG_LOG:-0}")"
-
-unset -f _simple_getprop
-unset -f _get_common_setting
 
 test "${DEBUG_LOG:?}" -ne 0 && enable_debug_log # Enable file logging if needed
 

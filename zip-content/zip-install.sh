@@ -8,7 +8,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # shellcheck enable=all
 
-readonly ZIPINSTALL_VERSION='1.2.4'
+readonly ZIPINSTALL_VERSION='1.2.8'
 
 umask 022 || :
 PATH="${PATH:-/system/bin}:."
@@ -120,6 +120,12 @@ ui_error_msg()
   fi
 }
 
+is_head_functional()
+{
+  command 1> /dev/null -v 'head' || return 1
+  test "$(printf 2> /dev/null '%s\n' 'ABCD' | head 2> /dev/null -c 2 || :)" = 'AB' || return 2 # Some versions of head are broken or incomplete
+}
+
 if test -n "${*}"; then
   for _param in "${@}"; do
     shift || {
@@ -168,7 +174,7 @@ if test "$(whoami || :)" != 'root'; then
       ui_error_msg 'Unable to find myself'
       exit 3
     }
-    exec su 0 sh -c "AUTO_ELEVATED=true DEBUG_LOG='${DEBUG_LOG:-0}' FORCE_HW_BUTTONS='${FORCE_HW_BUTTONS:-0}' CI='${CI:-false}' TMPDIR='${TMPDIR:-}' sh -- '${ZIP_INSTALL_SCRIPT:?}' \"\${@}\"" '[su]zip-install.sh' "${@}" || ui_error_msg 'failed: exec'
+    exec su 0 sh -c "AUTO_ELEVATED=true DEBUG_LOG='${DEBUG_LOG:-0}' DRY_RUN='${DRY_RUN:-0}' KEY_TEST_ONLY='${KEY_TEST_ONLY:-0}' FORCE_HW_KEYS='${FORCE_HW_KEYS:-0}' CI='${CI:-false}' TMPDIR='${TMPDIR:-}' sh -- '${ZIP_INSTALL_SCRIPT:?}' \"\${@}\"" '[su]zip-install.sh' "${@}" || ui_error_msg 'failed: exec'
     exit "${?}"
   fi
 
@@ -235,7 +241,7 @@ test -s "${SCRIPT_NAME:?}" || {
 unzip -p -qq "${ZIPFILE:?}" 'META-INF/com/google/android/updater-script' 1> "${UPD_SCRIPT_NAME:?}" || : # Not strictly needed
 
 STATUS=0
-if ! command 1> /dev/null -v head || test '#!' = "$(head -q -c 2 -- "${SCRIPT_NAME:?}" || :)"; then
+if ! is_head_functional || test '#!' = "$(head -c 2 -- "${SCRIPT_NAME:?}" || :)"; then
   printf '%s\n' 'Executing script...'
 
   # Use STDERR (2) for recovery messages to avoid possible problems with subshells intercepting output
