@@ -70,6 +70,7 @@ jobs:
           fi
           printf 'CREATE_RELEASE=%s\n' "${CREATE_RELEASE:?}" >> "${GITHUB_OUTPUT?}"
           printf '%s\n' "${CREATE_RELEASE:?}"
+          git for-each-ref --sort='-creatordate' --format='%(refname:short)'
           echo '---'
           git fetch --no-tags -- origin '+refs/tags/v*:refs/tags/v*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
@@ -77,9 +78,10 @@ jobs:
           git fetch --no-tags -- origin tag 'v*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
-          git fetch --no-tags -- origin tags 'v*' || :
+          git fetch --no-tags -- origin 'tags/v*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
+          git for-each-ref --sort='-creatordate' --format='%(refname:short)'
       - name: "Delete previous nightly release"
         uses: actions/github-script@v7
         if: "${{ steps.nightly-logic.outputs.CREATE_RELEASE == 'true' }}"
