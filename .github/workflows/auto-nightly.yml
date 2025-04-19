@@ -71,11 +71,12 @@ jobs:
           printf 'CREATE_RELEASE=%s\n' "${CREATE_RELEASE:?}" >> "${GITHUB_OUTPUT?}"
           printf '%s\n' "${CREATE_RELEASE:?}"
           echo '---'
-          git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 --
-          echo '---'
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
-          git fetch -q -- refs/tags
+          git fetch -q -- refs
+          git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
+          echo '---'
+          git fetch -q -- 'origin/refs/tags/v*'
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
       - name: "Delete previous nightly release"
