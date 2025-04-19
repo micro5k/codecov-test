@@ -76,10 +76,10 @@ jobs:
           git fetch -q refs || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
-          git fetch -q 'origin/refs/tags/v*' || :
+          git fetch -q 'refs/tags/*:refs/tags/*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
-          git fetch -q 'refs/tags/v*' || :
+          git fetch -q 'refs/remotes/origin/*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
       - name: "Delete previous nightly release"
