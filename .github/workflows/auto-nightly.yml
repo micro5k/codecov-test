@@ -72,13 +72,10 @@ jobs:
           printf '%s\n' "${CREATE_RELEASE:?}"
           git for-each-ref --sort='-creatordate' --format='%(refname:short)'
           echo '---'
-          git fetch --no-tags -- origin '+refs/tags/v*:refs/tags/v*' || :
+          git fetch --no-tags -- origin '+refs/tags/v*:origin/refs/tags/v*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
           git fetch --no-tags -- origin tag 'v*' || :
-          git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
-          echo '---'
-          git fetch --no-tags -- origin 'refs/tags/v*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
           git for-each-ref --sort='-creatordate' --format='%(refname:short)'
