@@ -71,11 +71,14 @@ jobs:
           printf 'CREATE_RELEASE=%s\n' "${CREATE_RELEASE:?}" >> "${GITHUB_OUTPUT?}"
           printf '%s\n' "${CREATE_RELEASE:?}"
           echo '---'
-          git fetch -- origin '+refs/tags/v*:refs/tags/v*'
+          git fetch --no-tags -- origin '+refs/tags/v*:refs/tags/v*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
-          #git fetch -q upstream 'refs/tags/*:refs/tags/*' || :
-          #git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
+          git fetch --no-tags -- origin tag 'v*' || :
+          git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
+          echo '---'
+          git fetch --no-tags -- origin tags 'v*' || :
+          git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
       - name: "Delete previous nightly release"
         uses: actions/github-script@v7
