@@ -103,6 +103,10 @@ jobs:
           git ls-remote -- origin 'tags/v*' || :
           echo '==='
           git ls-remote -- origin 'refs/tags/v*' || :
+          echo '-'
+          git tag || :
+          echo '==='
+          git for-each-ref --sort='-creatordate' --format='%(refname:short)' || :
           echo '==='
       - name: "Delete previous nightly release"
         uses: actions/github-script@v7
