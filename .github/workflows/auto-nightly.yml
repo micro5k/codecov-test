@@ -98,6 +98,12 @@ jobs:
           echo '==='
           git ls-remote --tags origin || :
           echo '==='
+          git ls-remote -- origin 'v*' || :
+          echo '==='
+          git ls-remote -- origin 'tags/v*' || :
+          echo '==='
+          git ls-remote -- origin 'refs/tags/v*' || :
+          echo '==='
       - name: "Delete previous nightly release"
         uses: actions/github-script@v7
         if: "${{ steps.nightly-logic.outputs.CREATE_RELEASE == 'true' }}"
