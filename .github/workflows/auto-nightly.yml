@@ -98,11 +98,7 @@ jobs:
           echo '==='
           git ls-remote --tags origin || :
           echo '==='
-          git ls-remote -- origin 'v*' || :
-          echo '==='
-          git ls-remote -- origin 'tags/v*' || :
-          echo '==='
-          git ls-remote -- origin 'refs/tags/v*' || :
+          git ls-remote --tags origin 'refs/tags/v*' || :
           echo '-'
           git tag || :
           echo '==='
