@@ -78,6 +78,9 @@ jobs:
           git fetch --no-tags --depth 1 origin tag 'v*'
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
+          git fetch --no-tags origin 'v*'
+          git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
+          echo '---'
           git for-each-ref --sort='-creatordate' --format='%(refname:short)'
       - name: "Delete previous nightly release"
         uses: actions/github-script@v7
