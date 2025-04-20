@@ -81,7 +81,10 @@ jobs:
           git fetch --no-tags origin tag 'v*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
-          git fetch --no-tags origin 'v*' || :
+          git fetch --no-tags origin 'v*:v*' || :
+          git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
+          echo '---'
+          git fetch --no-tags origin 'tags/v*:tags/v*' || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
           git for-each-ref --sort='-creatordate' --format='%(refname:short)'
