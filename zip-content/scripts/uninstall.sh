@@ -1,7 +1,6 @@
 #!/sbin/sh
 # SPDX-FileCopyrightText: (c) 2016 ale5000
 # SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileType: SOURCE
 
 list_app_data_to_remove()
 {
@@ -56,6 +55,7 @@ PlayAutoInstallConfig|android.autoinstalls.config.google.nexus
 Velvet|com.google.android.googlequicksearchbox
 GoogleQuickSearchBox|
 PrebuiltGmail|com.google.android.gm
+Gmail|
 PlayGames|com.google.android.play.games
 
 Phonesky|com.android.vending
@@ -82,6 +82,7 @@ NewPipeLegacy|org.schabi.newpipelegacy
 NewPipeLegacyRevo|org.schabi.newpipelegacy.Revo
 YouTube|com.google.android.youtube
 YouTubeMusicPrebuilt|com.google.android.apps.youtube.music
+MyLocation|com.mirfatif.mylocation
 
 |com.qualcomm.location
 AMAPNetworkLocation|com.amap.android.location
@@ -153,11 +154,28 @@ if test "${IS_INCLUDED:-false}" = 'false'; then
     done
   }
 
+  delete_if_sha256_match()
+  {
+    if test -f "${1:?}"; then
+      _filename="${1:?}"
+      _filehash="$(sha256sum -- "${_filename:?}" | cut -d ' ' -f '1' -s)" || ui_error 'Failed to calculate SHA256 hash'
+      shift
+      for _hash in "${@}"; do
+        if test "${_hash:?}" = "${_filehash:?}"; then
+          ui_debug "Deleting '${_filename:?}'..."
+          rm -f -- "${_filename:?}" || ui_error 'Failed to delete file in delete_if_sha256_match()'
+          return
+        fi
+      done
+      ui_debug "Deletion of '${_filename:?}' skipped due to hash mismatch!"
+    fi
+  }
+
   ui_debug 'Uninstalling...'
 
   # shellcheck disable=SC2034
   {
-    IS_INSTALLATION='false'
+    SETUP_TYPE='uninstall'
     FIRST_INSTALLATION='true'
     API=999
     SYS_PATH="${ANDROID_ROOT:-/system}"
@@ -186,6 +204,8 @@ delete_folder_content_silent()
 
 INTERNAL_MEMORY_PATH='/sdcard0'
 if test -e '/mnt/sdcard'; then INTERNAL_MEMORY_PATH='/mnt/sdcard'; fi
+
+delete "${SYS_PATH:?}"/addon.d/*-microg.sh
 
 uninstall_list | while IFS='|' read -r FILENAME INTERNAL_NAME _; do
   if test -n "${INTERNAL_NAME}"; then
@@ -241,7 +261,7 @@ uninstall_list | while IFS='|' read -r FILENAME INTERNAL_NAME _; do
 
   if test -n "${INTERNAL_NAME}"; then
     # Only delete app updates during uninstallation or first-time installation
-    if test "${IS_INSTALLATION:?}" != 'true' || test "${FIRST_INSTALLATION:?}" = 'true'; then
+    if test "${SETUP_TYPE:?}" = 'uninstall' || test "${FIRST_INSTALLATION:?}" = 'true'; then
       delete "${DATA_PATH:?}/app/${INTERNAL_NAME}"
       delete "${DATA_PATH:?}/app/${INTERNAL_NAME}.apk"
       delete "${DATA_PATH:?}/app/${INTERNAL_NAME}"-*
@@ -283,10 +303,10 @@ if test "${STATUS}" -ne 0; then exit "${STATUS}"; fi
 
 framework_uninstall_list | while IFS='|' read -r INTERNAL_NAME _; do
   if test -n "${INTERNAL_NAME}"; then
-    delete "${SYS_PATH:?}/etc/permissions/${INTERNAL_NAME:?}.xml"
     delete "${SYS_PATH:?}/framework/${INTERNAL_NAME:?}.jar"
     delete "${SYS_PATH:?}/framework/${INTERNAL_NAME:?}.odex"
     delete "${SYS_PATH:?}"/framework/oat/*/"${INTERNAL_NAME:?}.odex"
+    delete "${SYS_PATH:?}/etc/permissions/${INTERNAL_NAME:?}.xml"
 
     # Dalvik cache
     delete "${DATA_PATH:?}"/dalvik-cache/*/system@framework@"${INTERNAL_NAME:?}".jar@classes*
@@ -299,17 +319,19 @@ STATUS="$?"
 if test "${STATUS}" -ne 0; then exit "${STATUS}"; fi
 
 if test "${API:?}" -lt 21; then
+  delete "${SYS_PATH:?}/lib64/libgmscore.so"
+  delete "${SYS_PATH:?}/lib64/libconscrypt_gmscore_jni.so"
+  delete "${SYS_PATH:?}/lib64/libcronet.102.0.5005.125.so"
   delete "${SYS_PATH:?}/lib64/libmapbox-gl.so"
   delete "${SYS_PATH:?}/lib64/libvtm-jni.so"
-  delete "${SYS_PATH:?}/lib64/libconscrypt_gmscore_jni.so"
-  delete "${SYS_PATH:?}/lib64/libcronet".*."so"
-  delete "${SYS_PATH:?}/lib64/libgmscore.so"
+  delete_if_sha256_match "${SYS_PATH:?}/lib64/libconscrypt_jni.so" '078e4458e63c7d49cebbf3b8181a7e14dfdfc013644382b678d6f94ecb72b85c' '1f025574c741445f9e8ae43067d2f7104ea497ef0cd0e4b63c06fd52dfea6bb4'
 
+  delete "${SYS_PATH:?}/lib/libgmscore.so"
+  delete "${SYS_PATH:?}/lib/libconscrypt_gmscore_jni.so"
+  delete "${SYS_PATH:?}/lib/libcronet.102.0.5005.125.so"
   delete "${SYS_PATH:?}/lib/libmapbox-gl.so"
   delete "${SYS_PATH:?}/lib/libvtm-jni.so"
-  delete "${SYS_PATH:?}/lib/libconscrypt_gmscore_jni.so"
-  delete "${SYS_PATH:?}/lib/libcronet".*."so"
-  delete "${SYS_PATH:?}/lib/libgmscore.so"
+  delete_if_sha256_match "${SYS_PATH:?}/lib/libconscrypt_jni.so" 'fc5b8c73f162b88eddd68a05ff0e2e3dbe08b50cd662a9f40f45367edc65cc9d' '6ba4cddde377ea7dca1fce6c6253655e448e8f32e8b9ff1d7446f46b696a972d'
 fi
 
 list_app_data_to_remove | while IFS='|' read -r FILENAME; do
@@ -322,7 +344,6 @@ done
 
 delete "${DATA_PATH:?}"/backup/com.google.android.gms.backup.BackupTransportService
 
-delete "${SYS_PATH:?}"/addon.d/*-microg.sh
 delete "${SYS_PATH:?}"/addon.d/*-microg-*.sh
 delete "${SYS_PATH:?}"/addon.d/*-unifiednlp.sh
 delete "${SYS_PATH:?}"/addon.d/*-mapsapi.sh
@@ -350,8 +371,6 @@ delete "${SYS_PATH:?}"/etc/permissions/privapp-permissions-org.microG.xml
 delete "${SYS_PATH:?}"/etc/permissions/privapp-permissions-microg.xml
 delete "${SYS_PATH:?}"/etc/permissions/permissions_org.fdroid.fdroid.privileged.xml
 
-delete "${SYS_PATH:?}"/etc/sysconfig/features.xml
-delete "${SYS_PATH:?}"/etc/sysconfig/google.xml
 delete "${SYS_PATH:?}"/etc/sysconfig/google_build.xml
 delete "${SYS_PATH:?}"/etc/sysconfig/org.microG.xml
 delete "${SYS_PATH:?}"/etc/sysconfig/microg.xml
@@ -359,11 +378,14 @@ delete "${SYS_PATH:?}"/etc/sysconfig/microg-*.xml
 
 delete "${SYS_PATH:?}"/etc/preferred-apps/google.xml
 
+delete "${SYS_PATH:?}/bin/minutil"
 delete "${SYS_PATH:?}/etc/org.fdroid.fdroid/additional_repos.xml"
-delete "${SYS_PATH:?}/etc/microg.xml"
+delete "${SYS_PATH:?}/etc/sysconfig/features.xml"
+delete "${SYS_PATH:?}/etc/sysconfig/google.xml"
 delete "${SYS_PATH:?}/etc/microg_device_profile.xml"
+delete "${SYS_PATH:?}/etc/microg.xml"
 
-if test -e "${SYS_PATH:?}/etc/org.fdroid.fdroid"; then rmdir --ignore-fail-on-non-empty -- "${SYS_PATH:?}/etc/org.fdroid.fdroid" || true; fi
+if test -d "${SYS_PATH:?}/etc/org.fdroid.fdroid"; then rmdir --ignore-fail-on-non-empty -- "${SYS_PATH:?}/etc/org.fdroid.fdroid" || :; fi
 
 # Legacy file
 delete "${SYS_PATH:?}/etc/zips/ug.prop"

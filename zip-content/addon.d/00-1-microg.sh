@@ -1,13 +1,39 @@
 #!/sbin/sh
 # ADDOND_VERSION=3
-
 # SPDX-FileCopyrightText: none
 # SPDX-License-Identifier: CC0-1.0
-# SPDX-FileType: SOURCE
 
-# NOTE: The following file come from: https://github.com/LineageOS/android_vendor_lineage/blob/HEAD/prebuilt/common/bin/backuptool.functions
+BASE_NAME='microG unofficial installer'
+
+_init_debug_log()
+{
+  test -z "${DEBUG_LOG-}" || return
+  DEBUG_LOG=0
+  DEBUG_LOG_FILE=''
+
+  if command 1> /dev/null -v 'getprop' && test "$(getprop 'zip.common.DEBUG_LOG' '0' || :)" = 1; then
+    if test -w "${TMPDIR:-/tmp}" && DEBUG_LOG_FILE="${TMPDIR:-/tmp}/debug-a5k.log"; then :; else test -w '/postinstall/tmp' && DEBUG_LOG_FILE='/postinstall/tmp/debug-a5k.log'; fi
+    if test -n "${DEBUG_LOG_FILE?}" && touch "${DEBUG_LOG_FILE:?}"; then
+      echo 1>&2 "Writing log: ${DEBUG_LOG_FILE?}"
+      DEBUG_LOG=1
+    fi
+  fi
+}
+
+_display_msg()
+{
+  _init_debug_log
+  echo "${1?}"
+  test "${DEBUG_LOG:?}" = 0 || echo "${1?}" 1>> "${DEBUG_LOG_FILE:?}"
+}
+
+# NOTE: The following file come from => https://github.com/LineageOS/android_vendor_lineage/blob/HEAD/prebuilt/common/bin/backuptool.functions
 # shellcheck source=/dev/null
-. '/tmp/backuptool.functions' || { printf 1>&2 'ERROR: Failed to source backuptool.functions\n'; return 9; }
+command . /tmp/backuptool.functions || {
+  _display_msg 1>&2 'ERROR: Failed to source backuptool.functions'
+  # shellcheck disable=SC2317
+  return 9 || exit 9
+}
 
 list_files()
 {
@@ -16,25 +42,25 @@ list_files()
 EOF
 }
 
-case "${1}" in
+case "${1-}" in
   backup)
-    printf '%s\n' 'Backup of microG unofficial installer in progress...'
+    _display_msg "${BASE_NAME?} - stage: ${1?}..."
     list_files | while IFS='|' read -r FILE _; do
-      if test -z "${FILE?}"; then continue; fi
-      printf ' %s\n' "${S:?}/${FILE:?}"
+      test -n "${FILE?}" || continue
+      _display_msg " ${S:?}/${FILE:?}"
       backup_file "${S:?}/${FILE:?}"
     done
-    printf '%s\n' 'Done.'
+    _display_msg 'Done.'
     ;;
   restore)
-    printf '%s\n' 'Restore of microG unofficial installer in progress...'
+    _display_msg "${BASE_NAME?} - stage: ${1?}..."
     list_files | while IFS='|' read -r FILE REPLACEMENT; do
-      if test -z "${FILE?}"; then continue; fi
+      test -n "${FILE?}" || continue
       R=''
       test -n "${REPLACEMENT?}" && R="${S:?}/${REPLACEMENT:?}"
       test -f "${C:?}/${S:?}/${FILE:?}" && restore_file "${S:?}/${FILE:?}" "${R?}"
     done
-    printf '%s\n' 'Done.'
+    _display_msg 'Done.'
     ;;
   pre-backup)
     # Stub
@@ -49,6 +75,6 @@ case "${1}" in
     # Stub
     ;;
   *)
-    printf 1>&2 'WARNING: addon.d unknown phase\n'
+    _display_msg 1>&2 "WARNING: addon.d unknown phase => ${1-}"
     ;;
 esac

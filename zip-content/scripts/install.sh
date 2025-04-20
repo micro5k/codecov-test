@@ -9,13 +9,13 @@ TMP_PATH="${2:?}"
 ### FUNCTIONS ###
 
 # shellcheck source=SCRIPTDIR/../inc/common-functions.sh
-. "${TMP_PATH:?}/inc/common-functions.sh" || exit "${?}"
+command . "${TMP_PATH:?}/inc/common-functions.sh" || exit "${?}"
 
 setup_fakestore()
 {
   if test "${USE_MICROG_BY_ALE5000:?}" = 0 && setup_app 1 '' 'microG Companion (FakeStore)' 'FakeStore' 'priv-app' true false; then
     :
-  elif setup_app 1 '' 'microG Companion (FakeStore) - signed by ale5000' 'FakeStore-ale5000' 'priv-app' true false; then
+  elif setup_app 1 '' 'microG Companion (FakeStore) - signed by ale5000' 'FakeStoreA5K' 'priv-app' true false; then
     :
   elif setup_app 1 '' 'microG Companion Legacy (FakeStore)' 'FakeStoreLegacy' 'priv-app' true false; then
     :
@@ -42,24 +42,21 @@ else
   ui_error "Your Android version is too old, API: ${API?}"
 fi
 
-USE_MICROG_BY_ALE5000="$(parse_setting 'USE_MICROG_BY_ALE5000' "${USE_MICROG_BY_ALE5000:?}")"
-INSTALL_FDROIDPRIVEXT="$(parse_setting 'INSTALL_FDROIDPRIVEXT' "${INSTALL_FDROIDPRIVEXT:?}")"
-INSTALL_AURORASERVICES="$(parse_setting 'INSTALL_AURORASERVICES' "${INSTALL_AURORASERVICES:?}")"
-INSTALL_NEWPIPE="$(parse_setting 'INSTALL_NEWPIPE' "${INSTALL_NEWPIPE:?}")"
-INSTALL_MYLOCATION="$(parse_setting 'INSTALL_MYLOCATION' "${INSTALL_MYLOCATION:?}")"
+USE_MICROG_BY_ALE5000="$(parse_setting 'general' 'USE_MICROG_BY_ALE5000' "${USE_MICROG_BY_ALE5000:?}")"
 
-INSTALL_PLAYSTORE="$(parse_setting 'INSTALL_PLAYSTORE' "${INSTALL_PLAYSTORE:-}" 'custom' 'SELECTED_MARKET' 'PlayStore')"
-INSTALL_GMAIL_FOR_ANDROID_5_TO_7="$(parse_setting 'INSTALL_GMAIL_FOR_ANDROID_5_TO_7' "${INSTALL_GMAIL_FOR_ANDROID_5_TO_7:-}")"
-INSTALL_ANDROIDAUTO="$(parse_setting 'INSTALL_ANDROIDAUTO' "${INSTALL_ANDROIDAUTO:-}")"
+APP_DEJAVUBACKEND="$(parse_setting 'app' 'DEJAVUBACKEND' "${APP_DEJAVUBACKEND:?}")"
+APP_NOMINATIMBACKEND="$(parse_setting 'app' 'NOMINATIMBACKEND' "${APP_NOMINATIMBACKEND:?}")"
 
-# Display info
-display_info
-ui_msg_empty_line
+APP_FDROIDPRIVEXT="$(parse_setting 'app' 'FDROIDPRIVEXT' "${APP_FDROIDPRIVEXT:?}")"
+APP_AURORASERVICES="$(parse_setting 'app' 'AURORASERVICES' "${APP_AURORASERVICES:?}")"
+APP_NEWPIPE="$(parse_setting 'app' 'NEWPIPE' "${APP_NEWPIPE:?}")"
+APP_MYLOCATION="$(parse_setting 'app' 'MYLOCATION' "${APP_MYLOCATION:?}")"
 
-if test "${IS_INSTALLATION:?}" = 'true'; then
-  ui_msg 'Starting installation...'
-  ui_msg_empty_line
+APP_PLAYSTORE="$(parse_setting 'app' 'PLAYSTORE' "${APP_PLAYSTORE-}" 'custom' 'SELECTED_MARKET' 'PlayStore')"
+APP_GMAIL_FOR_ANDROID_5_TO_7="$(parse_setting 'app' 'GMAIL_FOR_ANDROID_5_TO_7' "${APP_GMAIL_FOR_ANDROID_5_TO_7-}")"
+APP_ANDROIDAUTO="$(parse_setting 'app' 'ANDROIDAUTO' "${APP_ANDROIDAUTO-}")"
 
+if test "${SETUP_TYPE:?}" = 'install'; then
   # Extracting
   ui_msg 'Extracting...'
   custom_package_extract_dir 'origin' "${TMP_PATH:?}"
@@ -69,6 +66,8 @@ if test "${IS_INSTALLATION:?}" = 'true'; then
 
   # Configuring
   ui_msg 'Configuring...'
+
+  set_filename_of_base_sysconfig_xml 'google.xml'
 
   setup_lib 1 '' 'microG Maps v1 API' 'com.google.android.maps' false
 
@@ -82,26 +81,29 @@ if test "${IS_INSTALLATION:?}" = 'true'; then
   install_backends='false'
   if test "${USE_MICROG_BY_ALE5000:?}" = 0 && test "${MAIN_ABI:?}" != 'armeabi' && setup_app 1 '' 'microG Services' 'GmsCore' 'priv-app' true false; then
     :
-  elif test "${MAIN_ABI:?}" != 'armeabi' && setup_app 1 '' 'microG Services - signed by ale5000' 'GmsCore-ale5000' 'priv-app' true false; then
-    :
+  elif test "${MAIN_ABI:?}" != 'armeabi' && setup_app 1 '' 'microG Services - signed by ale5000' 'GmsCoreA5K' 'priv-app' true false; then
+    USE_MICROG_BY_ALE5000=1
   elif setup_app 1 '' 'microG Services (vtm)' 'GmsCoreVtm' 'priv-app' false false; then
     install_backends='true'
   elif setup_app 1 '' 'microG Services (vtm-legacy)' 'GmsCoreVtmLegacy' 'priv-app' false false; then
     install_backends='true'
   fi
 
-  setup_app 1 '' 'microG Services Framework Proxy' 'GsfProxy' 'priv-app' false false
+  setup_app 1 '' 'microG Services Framework Proxy' 'GsfProxyA5K' 'priv-app' false false
+
+  setup_app 1 '' 'UnifiedNlp (legacy)' 'LegacyNetworkLocation' 'app' false false &&
+    install_backends='true'
 
   if test "${install_backends:?}" = 'true'; then
-    setup_app "${INSTALL_DEJAVUBACKEND:?}" '' 'Déjà Vu Location Service' 'DejaVuBackend' 'app'
-    setup_app "${INSTALL_NOMINATIMGEOBACKEND:?}" '' 'Nominatim Geocoder Backend' 'NominatimGeocoderBackend' 'app'
+    setup_app "${APP_DEJAVUBACKEND:?}" 'APP_DEJAVUBACKEND' 'Déjà Vu Location Service' 'DejaVuBackend' 'app'
+    setup_app "${APP_NOMINATIMBACKEND:?}" 'APP_NOMINATIMBACKEND' 'Nominatim Geocoder Backend' 'NominatimGeocoderBackend' 'app'
   fi
 
   # Store selection
   SELECTED_MARKET='FakeStore'
-  if setup_app "${INSTALL_PLAYSTORE:-}" '' 'Google Play Store' 'PlayStore' 'priv-app' true; then
+  if setup_app "${APP_PLAYSTORE?}" '' 'Google Play Store' 'PlayStore' 'priv-app' true; then
     SELECTED_MARKET='PlayStore'
-  elif setup_app "${INSTALL_PLAYSTORE:-}" '' 'Google Play Store (legacy)' 'PlayStoreLegacy' 'priv-app' true; then
+  elif setup_app "${APP_PLAYSTORE?}" '' 'Google Play Store (legacy)' 'PlayStoreLegacy' 'priv-app' true; then
     SELECTED_MARKET='PlayStore'
   else
     # Fallback to FakeStore
@@ -114,18 +116,16 @@ if test "${IS_INSTALLATION:?}" = 'true'; then
     move_rename_file "${TMP_PATH:?}/origin/etc/microg-gcm.xml" "${TMP_PATH:?}/files/etc/microg.xml"
   fi
 
-  setup_app 1 '' 'UnifiedNlp (legacy)' 'LegacyNetworkLocation' 'app' false false
+  setup_app "${APP_FDROIDPRIVEXT:?}" 'APP_FDROIDPRIVEXT' 'F-Droid Privileged Extension' 'FDroidPrivilegedExtension' 'priv-app'
+  setup_app "${APP_AURORASERVICES:?}" 'APP_AURORASERVICES' 'Aurora Services' 'AuroraServices' 'priv-app'
 
-  setup_app "${INSTALL_FDROIDPRIVEXT:?}" 'INSTALL_FDROIDPRIVEXT' 'F-Droid Privileged Extension' 'FDroidPrivilegedExtension' 'priv-app'
-  setup_app "${INSTALL_AURORASERVICES:?}" 'INSTALL_AURORASERVICES' 'Aurora Services' 'AuroraServices' 'priv-app'
+  setup_app "${APP_NEWPIPE:?}" 'APP_NEWPIPE' 'NewPipe' 'NewPipe' 'app' true ||
+    setup_app "${APP_NEWPIPE:?}" 'APP_NEWPIPE' 'NewPipe Legacy Revo' 'NewPipeLegacyRevo' 'app' true
 
-  setup_app "${INSTALL_NEWPIPE:?}" 'INSTALL_NEWPIPE' 'NewPipe' 'NewPipe' 'app' true ||
-    setup_app "${INSTALL_NEWPIPE:?}" 'INSTALL_NEWPIPE' 'NewPipe Legacy Revo' 'NewPipeLegacyRevo' 'app' true
+  setup_app "${APP_MYLOCATION:?}" 'APP_MYLOCATION' 'My Location' 'MyLocation' 'app'
 
-  setup_app "${INSTALL_MYLOCATION:?}" 'INSTALL_MYLOCATION' 'My Location' 'MyLocation' 'app'
-
-  setup_app "${INSTALL_GMAIL_FOR_ANDROID_5_TO_7:-}" 'INSTALL_GMAIL_FOR_ANDROID_5_TO_7' 'Gmail' 'Gmail' 'app' true
-  setup_app "${INSTALL_ANDROIDAUTO:-}" 'INSTALL_ANDROIDAUTO' 'Android Auto stub' 'AndroidAuto' 'priv-app' true
+  setup_app "${APP_GMAIL_FOR_ANDROID_5_TO_7?}" 'APP_GMAIL_FOR_ANDROID_5_TO_7' 'Gmail' 'Gmail' 'app' true
+  setup_app "${APP_ANDROIDAUTO?}" 'APP_ANDROIDAUTO' 'Android Auto stub' 'AndroidAuto' 'priv-app' true
 
   if test "${API:?}" -ge 19; then
     setup_util 'minutil' 'MinUtil'
@@ -139,15 +139,12 @@ if test "${IS_INSTALLATION:?}" = 'true'; then
       RESET_GMS_DATA_OF_ALL_APPS='0'
     fi
   fi
-else
-  ui_msg 'Starting uninstallation...'
-  ui_msg_empty_line
 fi
 
-if test "${IS_INSTALLATION:?}" = 'true'; then
+if test "${SETUP_TYPE:?}" = 'install'; then
   disable_app 'com.android.vending'
-  disable_app 'com.google.android.gsf'
   kill_app 'com.google.android.gsf.login'
+  disable_app 'com.google.android.gsf'
   if test "${FIRST_INSTALLATION:?}" = 'true'; then
     disable_app 'com.google.android.gms'
   fi
@@ -156,14 +153,15 @@ fi
 # Clean previous installations
 clean_previous_installations
 
-if test "${IS_INSTALLATION:?}" != 'true'; then
+if test "${SETUP_TYPE:?}" = 'uninstall'; then
   clear_app 'com.android.vending'
-  clear_app 'com.google.android.gsf'
   clear_app 'com.google.android.gsf.login'
+  clear_app 'com.google.android.gsf'
   clear_app 'com.google.android.gms'
   reset_gms_data_of_all_apps
 
-  finalize_and_report_success
+  finalize_correctly
+  exit 0
 fi
 
 # Preparing remaining files
@@ -214,11 +212,13 @@ if test "${DRY_RUN:?}" -eq 0; then
   #fi
 
   # Install survival script
-  if test -e "${SYS_PATH:?}/addon.d"; then
+  if test -d "${SYS_PATH:?}/addon.d"; then
     ui_msg 'Installing survival script...'
     write_file_list "${TMP_PATH}/files" "${TMP_PATH}/files/" "${TMP_PATH}/backup-filelist.lst"
     replace_line_in_file_with_file "${TMP_PATH}/addon.d/00-1-microg.sh" '%PLACEHOLDER-1%' "${TMP_PATH}/backup-filelist.lst"
     copy_file "${TMP_PATH}/addon.d/00-1-microg.sh" "${SYS_PATH}/addon.d"
+  else
+    ui_warning 'addon.d scripts are not supported by your ROM'
   fi
 fi
 
@@ -227,4 +227,4 @@ if test "${RESET_GMS_DATA_OF_ALL_APPS:?}" != '0'; then
   reset_gms_data_of_all_apps
 fi
 
-finalize_and_report_success
+finalize_correctly
