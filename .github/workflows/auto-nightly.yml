@@ -88,6 +88,11 @@ jobs:
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' --count=1 -- 'refs/tags/v*'
           echo '---'
           git for-each-ref --sort='-creatordate' --format='%(refname:short)'
+          echo '==='
+          git tag -l -- 'v*'
+          echo '==='
+          git show-ref --tags
+          echo '==='
       - name: "Delete previous nightly release"
         uses: actions/github-script@v7
         if: "${{ steps.nightly-logic.outputs.CREATE_RELEASE == 'true' }}"
