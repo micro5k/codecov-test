@@ -96,12 +96,13 @@ jobs:
           echo '==='
           git show-ref --tags || :
           echo '==='
+          echo '==='
           git ls-remote origin || :
           echo '==='
-          git ls-remote origin 'refs/tags/v*' || :
-          echo '-'
-          git tag || :
+          git fetch --no-tags -- origin 'refs/tags/v*:refs/tags/v*'
+          git ls-remote -- origin 'refs/tags/v*'
           echo '==='
+          git tag || :
           git for-each-ref --sort='-creatordate' --format='%(refname:short)' || :
           echo '==='
       - name: "Delete previous nightly release"
