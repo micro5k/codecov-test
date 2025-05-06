@@ -31,13 +31,6 @@ jobs:
         id: "build"
         shell: bash
         run: |
-          echo '_${{ github.repository }}_' || :
-          echo '_${{ github.actor }}_' || :
-          echo '_${{ github.triggering_actor }}_' || :
-          echo '${{ github.server_url}}/${{ github.repository }}.git'
-          tag_count="$(git ls-remote --tags -- '${{ github.server_url}}/${{ github.repository }}.git' | wc -l)" || tag_count=0
-          echo "${tag_count}"
-          exit 0
           # Building nightly...
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
       - name: "ZIP info"
@@ -67,13 +60,14 @@ jobs:
         shell: bash
         run: |
           # Do we need to release the nightly?
+          tag_count="$(git ls-remote --tags -- '${{ github.server_url }}/${{ github.repository }}.git' | wc -l)" || tag_count=0
           git fetch -q origin
           CREATE_RELEASE='false'
           IS_LATEST_COMMIT='false'
           if test '${{ github.sha }}' = "$(git log -n 1 --pretty='%H' 'origin/main' || :)"; then
             IS_LATEST_COMMIT='true'
           fi
-          if test "${IS_LATEST_COMMIT:?}" = 'true' && '${{ steps.build.outputs.ZIP_BUILD_TYPE_SUPPORTED == 'true' && steps.build.outputs.ZIP_IS_ALPHA == 'true' && github.event_name != 'pull_request' }}'; then
+          if test "${tag_count?}" != 0 && test "${IS_LATEST_COMMIT:?}" = 'true' && '${{ steps.build.outputs.ZIP_BUILD_TYPE_SUPPORTED == 'true' && steps.build.outputs.ZIP_IS_ALPHA == 'true' }}'; then
             CREATE_RELEASE='true'
           fi
           printf 'CREATE_RELEASE=%s\n' "${CREATE_RELEASE:?}" >> "${GITHUB_OUTPUT?}"
