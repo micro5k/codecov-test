@@ -15,6 +15,7 @@ jobs:
   base-job:
     name: "Nightly"
     runs-on: ubuntu-latest
+    if: "${{ github.event_name == 'push' && github.ref_type == 'branch' }}"
     permissions:
       contents: write # Needed to create a tag
 
@@ -30,12 +31,11 @@ jobs:
         id: "build"
         shell: bash
         run: |
-          echo '_${{ github.url }}_' || :
-          echo '_${{ github.repo }}_' || :
-          echo '_${{ github.action_repo }}_' || :
+          echo '_${{ github.repository }}_' || :
           echo '_${{ github.action_repository }}_' || :
-          echo '_${{ github.event_name }}_' || :
-          echo '_${{ github.ref_type }}_' || :
+          echo '_${{ github.triggering_actor }}_' || :
+          echo '_${{ github.repositoryUrl }}_' || :
+          echo '_${{ github.repository_url }}_' || :
           exit 0
           # Building nightly...
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
