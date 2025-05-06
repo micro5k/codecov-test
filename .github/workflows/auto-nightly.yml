@@ -34,9 +34,9 @@ jobs:
           echo '_${{ github.repository }}_' || :
           echo '_${{ github.actor }}_' || :
           echo '_${{ github.triggering_actor }}_' || :
-          echo "git ls-remote --tags -- '${{ github.repositoryUrl }}' | wc -l || printf '%s\n' '0'"
-          git ls-remote --tags -- '${{ github.repositoryUrl }}' | wc -l || printf '%s\n' '0'
-          #echo "$(git ls-remote --tags -- '${{ github.repositoryUrl }}' | wc -l || printf '%s\n' '0')"
+          echo '${{ github.server_url}}/${{ github.repository }}.git'
+          tag_count="$(git ls-remote --tags -- '${{ github.server_url}}/${{ github.repository }}.git' | wc -l)" || tag_count=0
+          echo "${tag_count}"
           exit 0
           # Building nightly...
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
