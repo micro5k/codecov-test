@@ -1052,12 +1052,12 @@ initialize()
   LIVE_SETUP_DEFAULT="$(parse_setting 'general' 'LIVE_SETUP_DEFAULT' "${LIVE_SETUP_DEFAULT:?}" 'false')"
   LIVE_SETUP_TIMEOUT="$(parse_setting 'general' 'LIVE_SETUP_TIMEOUT' "${LIVE_SETUP_TIMEOUT:?}" 'false')"
 
-  case "${KEY_TEST_ONLY?}" in '' | *[!0-1]*) KEY_TEST_ONLY=1 ;; *) ;; esac
+  case "${KEY_TEST_ONLY?}" in 0 | 1) ;; *) KEY_TEST_ONLY=1 ;; esac
   if test "${KEY_TEST_ONLY:?}" -eq 1; then DRY_RUN=2; fi
   readonly KEY_TEST_ONLY
   export KEY_TEST_ONLY
 
-  case "${DRY_RUN?}" in '' | *[!0-2]*) DRY_RUN=2 ;; *) ;; esac
+  case "${DRY_RUN?}" in 0 | 1 | 2) ;; *) DRY_RUN=2 ;; esac
   readonly DRY_RUN
   export DRY_RUN
 
@@ -2108,11 +2108,11 @@ verify_sha1_hash()
 
   _v_file_hash="$(sha1sum -- "${_v_filename:?}" | cut -d ' ' -f '1' -s)" || ui_error "Failed to calculate SHA1 hash of '${_v_filename?}'"
   if test -z "${_v_file_hash?}" || test "${_v_file_hash:?}" != "${3?}"; then
-    ui_msg "Verifying ${1?}... ERROR"
+    ui_msg "  Verifying ${1?}... ERROR"
     return 1
   fi
 
-  ui_msg "Verifying ${1?}... OK"
+  ui_msg "  Verifying ${1?}... OK"
   return 0
 }
 
@@ -2255,7 +2255,7 @@ extract_libs()
 {
   local _lib_selected _curr_arch _backup_ifs
 
-  ui_msg "Extracting libs..."
+  ui_msg "  Extracting libs..."
   create_dir "${TMP_PATH:?}/libs"
   zip_extract_dir "${TMP_PATH:?}/files/${1:?}/${2:?}.apk" 'lib' "${TMP_PATH:?}/libs"
 
@@ -2283,7 +2283,7 @@ extract_libs()
 
     if test "${_lib_selected:?}" = 'true'; then
       move_rename_dir "${TMP_PATH:?}/selected-libs" "${TMP_PATH:?}/files/${1:?}/lib"
-    elif test "${MAIN_ABI:?}" = 'arm64-v8a' || test "${MAIN_ABI:?}" = 'mips64' || test "${MAIN_ABI:?}" = 'mips'; then
+    elif test "${MAIN_ABI:?}" = 'mips64' || test "${MAIN_ABI:?}" = 'mips'; then
       : # Tolerate missing libraries
     else
       ui_error "Failed to select library"
@@ -2357,8 +2357,6 @@ setup_app()
 
   _output_dir=''
   _installed_file_list=''
-
-  ui_debug ''
 
   if test "${API:?}" -ge "${_min_api:?}" && test "${API:?}" -le "${_max_api:-999}"; then
     if test "${_optional:?}" = 'true' && test "${LIVE_SETUP_ENABLED:?}" = 'true'; then
@@ -2442,8 +2440,6 @@ setup_lib()
 
   _output_dir="${_dir:?}"
 
-  ui_debug ''
-
   if test "${API:?}" -ge "${_min_api:?}" && test "${API:?}" -le "${_max_api:-999}"; then
     if test "${_optional:?}" = 'true' && test "${LIVE_SETUP_ENABLED:?}" = 'true'; then
       choose "Do you want to install ${_vanity_name:?}?" '+) Yes' '-) No'
@@ -2481,7 +2477,6 @@ setup_lib()
 
 setup_util()
 {
-  ui_debug ''
   ui_msg "Enabling utility: ${2?}"
 
   mkdir -p "${TMP_PATH:?}/files/bin" || ui_error "Failed to create the folder for '${2?}'"
@@ -2570,7 +2565,7 @@ inputevent_initialize()
 
   INPUT_DEVICE_LIST=''
 
-  for _device in 'gpio-keys' 'qpnp_pon' 'sec_key' 'sec_touchkey' 'qwerty' 'qwerty2'; do
+  for _device in 'gpio-keys' 'gpio_keys' 'qpnp_pon' 'sec_key' 'sec_touchkey' 'qwerty' 'qwerty2'; do
     if test "${IS_EMU:?}" != 'true'; then
       case "${_device:?}" in 'qwerty' | 'qwerty2') continue ;; *) ;; esac
     fi
@@ -3276,6 +3271,7 @@ choose()
 {
   local _last_status=0
 
+  test "${KEY_TEST_ONLY:?}" -eq 1 || ui_msg_empty_line
   ui_msg "QUESTION: ${1:?}"
   test -z "${2?}" || ui_msg "${2:?}"
   test -z "${3?}" || ui_msg "${3:?}"

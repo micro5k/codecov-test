@@ -13,11 +13,11 @@ command . "${TMP_PATH:?}/inc/common-functions.sh" || exit "${?}"
 
 setup_fakestore()
 {
-  if test "${USE_MICROG_BY_ALE5000:?}" = 0 && setup_app 1 '' 'microG Companion (FakeStore)' 'FakeStore' 'priv-app' true false; then
+  if test "${USE_MICROG_BY_ALE5000:?}" = 0 && setup_app 1 '' 'microG Companion' 'FakeStore' 'priv-app' true false; then
     :
-  elif setup_app 1 '' 'microG Companion (FakeStore) - signed by ale5000' 'FakeStoreA5K' 'priv-app' true false; then
+  elif setup_app 1 '' 'microG Companion - signed by ale5000' 'FakeStoreA5K' 'priv-app' true false; then
     :
-  elif setup_app 1 '' 'microG Companion Legacy (FakeStore)' 'FakeStoreLegacy' 'priv-app' true false; then
+  elif setup_app 1 '' 'microG Companion Legacy' 'FakeStoreLegacy' 'priv-app' true false; then
     :
   fi
 }
@@ -57,15 +57,14 @@ APP_GMAIL_FOR_ANDROID_5_TO_7="$(parse_setting 'app' 'GMAIL_FOR_ANDROID_5_TO_7' "
 APP_ANDROIDAUTO="$(parse_setting 'app' 'ANDROIDAUTO' "${APP_ANDROIDAUTO-}")"
 
 if test "${SETUP_TYPE:?}" = 'install'; then
-  # Extracting
   ui_msg 'Extracting...'
   custom_package_extract_dir 'origin' "${TMP_PATH:?}"
   custom_package_extract_dir 'files' "${TMP_PATH:?}"
   custom_package_extract_dir 'addon.d' "${TMP_PATH:?}"
   create_dir "${TMP_PATH:?}/files/etc"
 
-  # Configuring
   ui_msg 'Configuring...'
+  ui_msg_empty_line
 
   set_filename_of_base_sysconfig_xml 'google.xml'
 
@@ -91,8 +90,9 @@ if test "${SETUP_TYPE:?}" = 'install'; then
 
   setup_app 1 '' 'microG Services Framework Proxy' 'GsfProxyA5K' 'priv-app' false false
 
-  setup_app 1 '' 'UnifiedNlp (legacy)' 'LegacyNetworkLocation' 'app' false false &&
+  if setup_app 1 '' 'UnifiedNlp (legacy)' 'LegacyNetworkLocation' 'app' false false; then
     install_backends='true'
+  fi
 
   if test "${install_backends:?}" = 'true'; then
     setup_app "${APP_DEJAVUBACKEND:?}" 'APP_DEJAVUBACKEND' 'Déjà Vu Location Service' 'DejaVuBackend' 'app'
@@ -101,7 +101,9 @@ if test "${SETUP_TYPE:?}" = 'install'; then
 
   # Store selection
   SELECTED_MARKET='FakeStore'
-  if setup_app "${APP_PLAYSTORE?}" '' 'Google Play Store' 'PlayStore' 'priv-app' true; then
+  if test "${MAIN_ABI:?}" = 'arm64-v8a' && setup_app "${APP_PLAYSTORE?}" '' 'Google Play Store' 'PlayStoreARM64' 'priv-app' true; then
+    SELECTED_MARKET='PlayStore'
+  elif test "${MAIN_ABI:?}" != 'arm64-v8a' && setup_app "${APP_PLAYSTORE?}" '' 'Google Play Store' 'PlayStore' 'priv-app' true; then
     SELECTED_MARKET='PlayStore'
   elif setup_app "${APP_PLAYSTORE?}" '' 'Google Play Store (legacy)' 'PlayStoreLegacy' 'priv-app' true; then
     SELECTED_MARKET='PlayStore'

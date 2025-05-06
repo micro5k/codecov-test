@@ -3,11 +3,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # shellcheck enable=all
+# shellcheck disable=SC3043 # In POSIX sh, local is undefined
 # shellcheck disable=SC2310 # Ignore: This function is invoked in an 'if' condition so set -e will be disabled
 
 readonly SCRIPT_NAME='MinUtil'
 readonly SCRIPT_SHORTNAME="${SCRIPT_NAME?}"
-readonly SCRIPT_VERSION='1.2.15'
+readonly SCRIPT_VERSION='1.3.5'
 
 ### CONFIGURATION ###
 
@@ -132,6 +133,23 @@ warn_msg()
   fi
 }
 
+contains()
+{
+  case "${2?}" in
+    *"${1:?}"*) return 0 ;; # Found
+    *) ;;                   # NOT found
+  esac
+  return 1 # NOT found
+}
+
+_minutil_fix_tmpdir()
+{
+  # In some cases ${TMPDIR} is not set and it cause errors with HereDocs
+  if test -z "${TMPDIR-}" || test ! -w "${TMPDIR:?}"; then
+    if test -w '/tmp'; then TMPDIR='/tmp'; elif test -w '/postinstall/tmp'; then TMPDIR='/postinstall/tmp'; elif test -w '/data/local/tmp'; then TMPDIR='/data/local/tmp'; fi
+  fi
+}
+
 _minutil_aligned_print()
 {
   if test "${EMULATED_PRINTF-}" != '1'; then
@@ -232,7 +250,7 @@ if _minutil_check_getopt; then
   test -n "${NO_COLOR-}" || printf 1>&2 '\033[1;31m\r       \r' || :
 
   if minutil_args="$(
-    getopt -o '+vVhsri:' -l 'version,help,rescan-storage,reset-battery,remove-all-accounts,force-gcm-reconnection,reset-gms-data,reinstall-package:' -n "${SCRIPT_SHORTNAME:?}" -- "${@}"
+    getopt -o '+vVhsmri:' -l 'version,help,rescan-storage,fix-microg,reset-battery,remove-all-accounts,force-gcm-reconnection,reset-gms-data,reinstall-package:' -n "${SCRIPT_SHORTNAME:?}" -- "${@}"
   )"; then
     eval ' \set' '--' "${minutil_args?}" || exit 126
   else
@@ -249,7 +267,6 @@ if test "${#}" -gt 0; then
   for param in "${@}"; do
     if test "${param?}" = '-v'; then
       SCRIPT_VERBOSE='true'
-      : "${SCRIPT_VERBOSE}" # UNUSED
       break
     fi
   done
@@ -258,7 +275,8 @@ fi
 
 _list_account_files()
 {
-  cat << 'EOF'
+  {
+    cat << 'EOF'
 /data/system_de/0/accounts_de.db
 /data/system_de/0/accounts_de.db-journal
 /data/system_ce/0/accounts_ce.db
@@ -273,6 +291,105 @@ _list_account_files()
 /data/system/sync/accounts.xml
 /data/system/sync/status.bin
 EOF
+  } || {
+    error_msg 'HereDoc failed'
+    return 1
+  }
+}
+
+_gms_list_perms()
+{
+  {
+    cat << 'EOF'
+android.permission.ACCESS_COARSE_LOCATION
+android.permission.ACCESS_FINE_LOCATION
+android.permission.ACCESS_BACKGROUND_LOCATION
+android.permission.ACCESS_NETWORK_STATE
+android.permission.ACCESS_WIFI_STATE
+android.permission.AUTHENTICATE_ACCOUNTS
+android.permission.BLUETOOTH
+android.permission.BLUETOOTH_ADMIN
+android.permission.BLUETOOTH_ADVERTISE
+android.permission.BLUETOOTH_CONNECT
+android.permission.BLUETOOTH_SCAN
+android.permission.BODY_SENSORS
+android.permission.CAMERA
+android.permission.CHANGE_DEVICE_IDLE_TEMP_WHITELIST
+android.permission.CHANGE_WIFI_STATE
+android.permission.FAKE_PACKAGE_SIGNATURE
+android.permission.FOREGROUND_SERVICE
+android.permission.GET_ACCOUNTS
+android.permission.INSTALL_LOCATION_PROVIDER
+android.permission.INTERACT_ACROSS_PROFILES
+android.permission.INTERACT_ACROSS_USERS
+android.permission.INTERNET
+android.permission.LOCATION_HARDWARE
+android.permission.MANAGE_ACCOUNTS
+android.permission.MANAGE_USB
+android.permission.MODIFY_PHONE_STATE
+android.permission.NETWORK_SCAN
+android.permission.NFC
+android.permission.POST_NOTIFICATIONS
+android.permission.READ_CONTACTS
+android.permission.READ_EXTERNAL_STORAGE
+android.permission.READ_PHONE_STATE
+android.permission.READ_SYNC_SETTINGS
+android.permission.READ_SYNC_STATS
+android.permission.RECEIVE_BOOT_COMPLETED
+android.permission.RECEIVE_SMS
+android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+android.permission.START_ACTIVITIES_FROM_BACKGROUND
+android.permission.SYSTEM_ALERT_WINDOW
+android.permission.UPDATE_APP_OPS_STATS
+android.permission.UPDATE_DEVICE_STATS
+android.permission.USE_BIOMETRIC
+android.permission.USE_CREDENTIALS
+android.permission.USE_FINGERPRINT
+android.permission.WAKE_LOCK
+android.permission.WATCH_APPOPS
+android.permission.WRITE_EXTERNAL_STORAGE
+android.permission.WRITE_SYNC_SETTINGS
+com.google.android.c2dm.permission.RECEIVE
+com.google.android.c2dm.permission.SEND
+com.google.android.gms.auth.api.phone.permission.SEND
+com.google.android.gms.auth.permission.GOOGLE_ACCOUNT_CHANGE
+com.google.android.gms.nearby.exposurenotification.EXPOSURE_CALLBACK
+com.google.android.gms.permission.AD_ID
+com.google.android.gtalkservice.permission.GTALK_SERVICE
+org.microg.gms.STATUS_BROADCAST
+EOF
+  } || {
+    error_msg 'HereDoc failed'
+    return 1
+  }
+}
+
+_store_list_perms()
+{
+  {
+    cat << 'EOF'
+android.permission.ACCESS_COARSE_LOCATION
+android.permission.ACCESS_NETWORK_STATE
+android.permission.DELETE_PACKAGES
+android.permission.FAKE_PACKAGE_SIGNATURE
+android.permission.FOREGROUND_SERVICE
+android.permission.GET_ACCOUNTS
+android.permission.INSTALL_PACKAGES
+android.permission.INTERACT_ACROSS_PROFILES
+android.permission.INTERACT_ACROSS_USERS
+android.permission.INTERNET
+android.permission.POST_NOTIFICATIONS
+android.permission.QUERY_ALL_PACKAGES
+android.permission.REQUEST_INSTALL_PACKAGES
+android.permission.USE_CREDENTIALS
+com.google.android.gms.auth.permission.GOOGLE_ACCOUNT_CHANGE
+com.google.android.gms.permission.READ_SETTINGS
+org.microg.gms.permission.READ_SETTINGS
+EOF
+  } || {
+    error_msg 'HereDoc failed'
+    return 1
+  }
 }
 
 _minutil_find_package()
@@ -361,6 +478,117 @@ minutil_reinstall_package()
   printf '%s\n' "Package ${1:-} reinstalled."
 }
 
+_minutil_package_is_microg()
+{
+  if dumpsys 2> /dev/null package "${1:?}" | grep -q -m 1 -F -e '/org.microg.gms.'; then
+    printf '%s\n' "  ${2?}"
+    return 0
+  fi
+
+  return 1
+}
+
+_minutil_is_perm_granted()
+{
+  if contains " ${1:?}: granted=true" "${CACHE_GRANTED_PERMS?}" && ! contains " ${1:?}: granted=false" "${CACHE_GRANTED_PERMS?}"; then
+    return 0
+  fi
+
+  return 1
+}
+
+_minutil_is_system_perm()
+{
+  case "${1:?}" in
+    'android.permission.'* | 'com.android.permission.'*) return 0 ;;
+    *) ;;
+  esac
+  return 1
+}
+
+_minutil_grant_perms()
+{
+  local _status _result
+
+  CACHE_GRANTED_PERMS="$(dumpsys package "${1:?}" | grep -F -e 'granted=')" || return 3
+
+  _status=0
+  while IFS='' read -r _perm; do
+    if _minutil_is_perm_granted "${_perm:?}"; then continue; fi
+
+    _result="$(pm 2>&1 grant "${1:?}" "${_perm:?}")" || {
+      case "${_result?}" in
+        *"Unknown permission: ${_perm:?}"*)
+          # Unknown permission
+          if test "${SCRIPT_VERBOSE:?}" != 'false'; then
+            # ${CACHE_USABLE_PERMS} does NOT always list all permissions so it can't be used to filter permissions earlier in the code
+            if _minutil_is_system_perm "${_perm:?}" && ! contains "${_perm:?}" "${CACHE_USABLE_PERMS:?}"; then
+              warn_msg "Permission NOT supported by your ROM => ${_perm?}"
+            else
+              warn_msg "Unknown permission => ${_perm?}"
+            fi
+          fi
+          ;;
+        *"Package ${1:?} has not requested permission ${_perm:?}"*)
+          # Permission has NOT been requested by the app (probably it is an old version of microG)
+          test "${SCRIPT_VERBOSE:?}" = 'false' || warn_msg "Permission has NOT been requested by the app => ${_perm?}"
+          ;;
+        *"Permission ${_perm:?} is not a changeable permission type"* | *"Permission ${_perm:?} requested by ${1:?} is not a changeable permission type"*)
+          # Permission CANNOT be granted manually
+          test "${SCRIPT_VERBOSE:?}" = 'false' || warn_msg "NOT a changeable permission => ${_perm?}"
+          ;;
+        *"Permission ${_perm:?} is managed by role"*)
+          # Permission CANNOT be granted manually
+          warn_msg "Permission is managed by role => ${_perm?}"
+          ;;
+        *)
+          _status=255
+          warn_msg "Failed to grant '${_perm?}' to '${1?}'"
+          ;;
+      esac
+      continue
+    }
+    printf '%s\n' "    Granted '${_perm?}' to '${1?}'"
+  done || {
+    _status=2
+    warn_msg "Failed to grant permissions to '${1?}'"
+  }
+
+  unset CACHE_GRANTED_PERMS
+  return "${_status:?}"
+}
+
+_minutil_set_installer()
+{
+  test -n "{2?}" || return 2
+  su "${2:?}" pm set-installer "${1:?}" 'com.android.vending'
+}
+
+minutil_fix_microg()
+{
+  local _store_uid
+
+  _minutil_fix_tmpdir
+
+  CACHE_USABLE_PERMS="$(pm list permissions | grep -F -e 'permission:' | cut -d ':' -f '2-' -s)" || return 2
+  _store_uid="$(dumpsys 2> /dev/null package 'com.android.vending' | grep -m 1 -F -e 'userId=' | cut -d '=' -f '2-' -s || :)" # Get store uid
+
+  printf '%s\n\n' 'Granting permissions to microG...'
+  if _minutil_package_is_microg 'com.google.android.gms' 'microG Services'; then
+    _gms_list_perms | _minutil_grant_perms 'com.google.android.gms' || set_status_if_error "${?}"
+    _minutil_set_installer 1> /dev/null 2>&1 'com.google.android.gms' "${_store_uid?}" || :
+    printf '\n'
+  fi
+  if _minutil_package_is_microg 'com.android.vending' 'microG Companion'; then
+    _store_list_perms | _minutil_grant_perms 'com.android.vending' || set_status_if_error "${?}"
+    _minutil_set_installer 1> /dev/null 2>&1 'com.android.vending' "${_store_uid?}" || :
+    printf '\n'
+  fi
+
+  unset CACHE_USABLE_PERMS
+  printf '%s\n' 'Done'
+}
+
 minutil_force_gcm_reconnection()
 {
   _is_caller_adb_or_root || return 1
@@ -392,7 +620,7 @@ minutil_remove_all_accounts()
 {
   _is_caller_root || return 1
 
-  test -e '/data' || {
+  test -d '/data' || {
     error_msg '/data NOT found'
     return 1
   }
@@ -400,6 +628,8 @@ minutil_remove_all_accounts()
     error_msg '/data is NOT writable'
     return 1
   }
+
+  _minutil_fix_tmpdir
 
   _list_account_files | while IFS='' read -r _file; do
     if test -e "${_file:?}"; then
@@ -552,6 +782,14 @@ while test "${#}" -gt 0; do
       fi
       ;;
 
+    -m | --fix-microg)
+      if test "${SYSTEM_API:?}" -ge 24; then
+        minutil_fix_microg
+      else
+        printf '%s\n' 'Not yet supported'
+      fi
+      ;;
+
     --reset-battery)
       minutil_reset_battery
       ;;
@@ -596,9 +834,10 @@ if test "${DISPLAY_HELP:?}" = 'true'; then
 
   _minutil_aligned_print '-h,--help' 'Show this help'
   _minutil_aligned_print '-s,--rescan-storage' 'Rescan storage to find file changes'
-  _minutil_aligned_print '--reset-battery' 'Reset battery stats and, if possible, also reset battery fuel gauge chip (need root)'
-  _minutil_aligned_print '--remove-all-accounts' 'Remove all accounts from the device (need root)'
+  _minutil_aligned_print '-m,--fix-microg'
   _minutil_aligned_print '--force-gcm-reconnection' 'Force GCM reconnection'
+  _minutil_aligned_print '--remove-all-accounts' 'Remove all accounts from the device (need root)'
+  _minutil_aligned_print '--reset-battery' 'Reset battery stats and, if possible, also reset battery fuel gauge chip (need root)'
   _minutil_aligned_print '-r,--reset-gms-data' 'Reset GMS data of all apps (need root)'
   _minutil_aligned_print '-i,--reinstall-package PACKAGE_NAME' 'Reinstall PACKAGE_NAME as if it were installed from Play Store and grant it all permissions'
 
