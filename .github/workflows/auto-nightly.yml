@@ -31,6 +31,8 @@ jobs:
         id: "build"
         shell: bash
         run: |
+          echo '${{ github.run_attempt }}'
+          exit 1
           # Building nightly...
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
       - name: "ZIP info"
