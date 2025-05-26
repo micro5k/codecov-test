@@ -7,7 +7,7 @@
 
 all: buildota buildotaoss ;
 
-.PHONY:
+.PHONY: all clean test check build cmdline
 
 buildota:
 	BUILD_TYPE=full "$(CURDIR)/build.sh" --no-default-build-type --no-pause $(ARGS)
