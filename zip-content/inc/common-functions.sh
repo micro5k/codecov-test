@@ -298,10 +298,11 @@ _detect_battery_level()
 
 _mount_helper()
 {
-  {
-    test -n "${DEVICE_MOUNT-}" && PATH="${PREVIOUS_PATH:?}" "${DEVICE_MOUNT:?}" 2> /dev/null "${@}"
-  } ||
+  if test -n "${DEVICE_MOUNT-}" && PATH="${PREVIOUS_PATH:?}" "${DEVICE_MOUNT:?}" 2> /dev/null "${@}"; then
+    :
+  else
     mount "${@}" || return "${?}"
+  fi
 
   return 0
 }
@@ -379,15 +380,6 @@ _get_mount_info()
   return 3
 }
 
-mount_partition()
-{
-  local _path
-  _path="$(_canonicalize "${1:?}")"
-
-  _mount_helper '-o' 'rw' "${_path:?}" || ui_warning "Failed to mount '${_path:-}'"
-  return 0 # Never fail
-}
-
 is_mounted()
 {
   if test "${TEST_INSTALL:-false}" = 'false' && command -v mountpoint 1> /dev/null; then
@@ -399,12 +391,15 @@ is_mounted()
   return 1                                                    # NOT mounted
 }
 
-is_mounted_read_only()
+is_mounted_read_write()
 {
   local _mount_info
-  _mount_info="$(_get_mount_info "${1:?}")" || ui_error "is_mounted_read_only has failed for '${1:-}'"
+  _mount_info="$(_get_mount_info "${1:?}")" || ui_error "is_mounted_read_write has failed for '${1?}'"
 
-  if printf '%s' "${_mount_info:?}" | grep -q -e '[(,[:blank:]]ro[[:blank:],)]'; then
+  # To avoid "write: Broken pipe" with "grep -q" / "grep -m 1" use "echo" instead of "printf" and ignore its exit code
+  if {
+    echo "${_mount_info:?}" || :
+  } | grep -q -e '[[:blank:],(]rw[),[:blank:]]'; then
     return 0
   fi
 
@@ -415,15 +410,15 @@ _remount_read_write_helper()
 {
   test "${DRY_RUN:?}" -lt 2 || return 2
 
-  {
-    test -n "${DEVICE_MOUNT-}" && PATH="${PREVIOUS_PATH:?}" "${DEVICE_MOUNT:?}" 2> /dev/null -o 'remount,rw' "${1:?}"
-  } ||
-    {
-      test -n "${DEVICE_MOUNT-}" && PATH="${PREVIOUS_PATH:?}" "${DEVICE_MOUNT:?}" 2> /dev/null -o 'remount,rw' "${1:?}" "${1:?}"
-    } ||
+  if test -n "${DEVICE_MOUNT-}" && PATH="${PREVIOUS_PATH:?}" "${DEVICE_MOUNT:?}" 2> /dev/null -o 'remount,rw' "${1:?}"; then
+    :
+  elif test -n "${DEVICE_MOUNT-}" && PATH="${PREVIOUS_PATH:?}" "${DEVICE_MOUNT:?}" 2> /dev/null -o 'remount,rw' "${1:?}" "${1:?}"; then
+    :
+  else
     mount -o 'remount,rw' "${1:?}" || return "${?}"
+  fi
 
-  if is_mounted_read_only "${1:?}"; then return 1; fi
+  is_mounted_read_write "${1:?}" || return 1
 
   return 0
 }
@@ -523,7 +518,7 @@ _manual_partition_mount()
       if test "${RECOVERY_FAKE_SYSTEM:?}" = 'true' && test "${_path:?}" = '/system'; then continue; fi
       _prepare_mountpoint "${_path:?}" || continue
 
-      if _mount_helper "${_block:?}" "${_path:?}"; then
+      if _mount_helper '-o' 'ro' "${_block:?}" "${_path:?}"; then
         IFS="${_backup_ifs:-}"
         LAST_MOUNTPOINT="${_path:?}"
         return 0
@@ -665,7 +660,7 @@ mount_partition_if_possible()
       *) ;;
     esac
 
-    if _mount_helper 2> /dev/null "${_mp:?}"; then
+    if _mount_helper 2> /dev/null '-o' 'ro' "${_mp:?}"; then
       LAST_MOUNTPOINT="${_mp:?}"
       LAST_PARTITION_MUST_BE_UNMOUNTED=1
       ui_debug "Mounted (2): ${LAST_MOUNTPOINT?}"
@@ -674,7 +669,7 @@ mount_partition_if_possible()
   done
 
   # In some cases there is no real partition but it is just a folder inside the system partition.
-  # In these cases no warnings are shown when the partition is not found.
+  # In these cases no warnings are shown when the real partition is not found.
   if test "${_partition_name:?}" != 'system' && test "${_partition_name:?}" != 'data'; then
     if test -n "${SYS_PATH-}" && test ! -L "${SYS_PATH:?}/${_partition_name:?}" && test -d "${SYS_PATH:?}/${_partition_name:?}"; then # Example: /system_root/system/product
       _skip_warnings='true'
@@ -755,19 +750,17 @@ parse_setting()
 
 remount_read_write()
 {
-  if is_mounted_read_only "${1:?}"; then
-    test "${DRY_RUN:?}" -lt 2 || {
-      ui_msg "INFO: The '${1?}' mountpoint is read-only"
-      return 0
-    }
-
+  if is_mounted_read_write "${1:?}"; then
+    return 0
+  elif test "${DRY_RUN:?}" -ge 2; then
+    ui_msg "INFO: The '${1?}' mountpoint is read-only"
+    return 0
+  else
     ui_msg "INFO: The '${1?}' mountpoint is read-only, it will be remounted"
-    _remount_read_write_helper "${1:?}" || {
-      return 1
-    }
+    if _remount_read_write_helper "${1:?}"; then return 0; fi
   fi
 
-  return 0
+  return 1
 }
 
 remount_read_write_if_possible()
@@ -775,28 +768,24 @@ remount_read_write_if_possible()
   local _required
   _required="${2:-true}"
 
-  if is_mounted_read_only "${1:?}"; then
-    test "${DRY_RUN:?}" -lt 2 || {
-      ui_msg "INFO: The '${1?}' mountpoint is read-only"
-      case "${_required:?}" in
-        'true') return 0 ;;
-        *) return 2 ;;
-      esac
-    }
-
+  if is_mounted_read_write "${1:?}"; then
+    return 0
+  elif test "${DRY_RUN:?}" -ge 2; then
+    ui_msg "INFO: The '${1?}' mountpoint is read-only"
+    case "${_required:?}" in 'true') return 0 ;; *) ;; esac
+    return 2
+  else
     ui_msg "INFO: The '${1?}' mountpoint is read-only, it will be remounted"
-    _remount_read_write_helper "${1:?}" || {
-      if test "${_required:?}" = 'true'; then
-        ui_error "Remounting of '${1?}' failed"
-      else
-        ui_warning "Remounting of '${1?}' failed"
-        ui_msg_empty_line
-        return 1
-      fi
-    }
+    if _remount_read_write_helper "${1:?}"; then return 0; fi
   fi
 
-  return 0
+  if test "${_required:?}" = 'true'; then
+    ui_error "Remounting of '${1?}' failed"
+  else
+    ui_warning "Remounting of '${1?}' failed"
+    ui_msg_empty_line
+  fi
+  return 1
 }
 
 is_string_starting_with()
@@ -806,6 +795,40 @@ is_string_starting_with()
     *) ;;
   esac
   return 1 # NOT found
+}
+
+install_survival_script()
+{
+  if test -d "${SYS_PATH:?}/addon.d"; then
+    ui_msg 'Installing survival script...'
+    write_file_list "${TMP_PATH:?}/files" "${TMP_PATH:?}/files/" "${TMP_PATH:?}/backup-filelist.lst"
+    replace_line_in_file_with_file "${TMP_PATH:?}/origin/addon.d/${1:?}.sh" '%PLACEHOLDER-1%' "${TMP_PATH:?}/backup-filelist.lst"
+    set_perm 0 0 0755 "${TMP_PATH:?}/origin/addon.d/${1:?}.sh"
+    test "${DRY_RUN:?}" -eq 0 || return
+    copy_file "${TMP_PATH:?}/origin/addon.d/${1:?}.sh" "${SYS_PATH:?}/addon.d"
+  else
+    ui_warning 'addon.d scripts are not supported by your ROM'
+    ui_msg_empty_line
+  fi
+}
+
+reset_runtime_permissions_if_needed()
+{
+  # Reset the runtime permissions to prevent issues on dirty flashing
+  if test "${API:?}" -ge 23; then
+    if test -e "${DATA_PATH:?}/system/users/0/runtime-permissions.xml"; then
+      if test "${FIRST_INSTALLATION:?}" = 'true' || ! grep -q -F -e "${1:?}" -- "${DATA_PATH:?}"/system/users/*/runtime-permissions.xml; then
+        ui_msg "Resetting Android runtime permissions..."
+        test "${DRY_RUN:?}" -ne 0 || delete "${DATA_PATH:?}"/system/users/*/runtime-permissions.xml
+      fi
+    fi
+    if test -e "${DATA_PATH:?}/misc_de/0/apexdata/com.android.permission/runtime-permissions.xml"; then
+      if test "${FIRST_INSTALLATION:?}" = 'true' || ! grep -q -F -e "${1:?}" -- "${DATA_PATH:?}"/misc_de/*/apexdata/com.android.permission/runtime-permissions.xml; then
+        ui_msg "Resetting Android runtime permissions..."
+        test "${DRY_RUN:?}" -ne 0 || delete "${DATA_PATH:?}"/misc_de/*/apexdata/com.android.permission/runtime-permissions.xml
+      fi
+    fi
+  fi
 }
 
 _write_test()
@@ -1024,9 +1047,10 @@ initialize()
   ODM_PATH=''
   DATA_PATH='/data'
 
-  PRODUCT_USABLE='false'
-  VENDOR_USABLE='false'
-  SYS_EXT_USABLE='false'
+  PRODUCT_RW='false'
+  VENDOR_RW='false'
+  SYS_EXT_RW='false'
+  ODM_RW='false'
 
   BASE_SYSCONFIG_XML=''
 
@@ -1063,6 +1087,7 @@ initialize()
 
   if test "${DRY_RUN:?}" -gt 0; then
     ui_warning "DRY RUN mode ${DRY_RUN?} enabled. No files on your device will be modified!!!"
+    sleep 2> /dev/null '0.02' || : # Wait some time otherwise ui_debug may appear before the previous ui_warning
     ui_debug ''
   fi
 
@@ -1125,7 +1150,9 @@ initialize()
   fi
 
   _find_and_mount_system
+  ui_debug ''
   _timeout_check
+
   cp -pf "${SYS_PATH:?}/build.prop" "${TMP_PATH:?}/build.prop" # Cache the file for faster access
 
   PREV_INSTALL_FAILED='false'
@@ -1244,27 +1271,27 @@ initialize()
   if mount_partition_if_possible 'product' "${SLOT_SUFFIX:+product}${SLOT_SUFFIX-}${NL:?}product${NL:?}"; then
     PRODUCT_PATH="${LAST_MOUNTPOINT:?}"
     UNMOUNT_PRODUCT="${LAST_PARTITION_MUST_BE_UNMOUNTED:?}"
-    remount_read_write_if_possible "${LAST_MOUNTPOINT:?}" false && PRODUCT_USABLE='true'
+    remount_read_write_if_possible "${LAST_MOUNTPOINT:?}" false && PRODUCT_RW='true'
   fi
   if mount_partition_if_possible 'vendor' "${SLOT_SUFFIX:+vendor}${SLOT_SUFFIX-}${NL:?}vendor${NL:?}"; then
     VENDOR_PATH="${LAST_MOUNTPOINT:?}"
     UNMOUNT_VENDOR="${LAST_PARTITION_MUST_BE_UNMOUNTED:?}"
-    remount_read_write_if_possible "${LAST_MOUNTPOINT:?}" false && VENDOR_USABLE='true'
+    remount_read_write_if_possible "${LAST_MOUNTPOINT:?}" false && VENDOR_RW='true'
   fi
   if mount_partition_if_possible 'system_ext' "${SLOT_SUFFIX:+system_ext}${SLOT_SUFFIX-}${NL:?}system_ext${NL:?}"; then
     SYS_EXT_PATH="${LAST_MOUNTPOINT:?}"
     UNMOUNT_SYS_EXT="${LAST_PARTITION_MUST_BE_UNMOUNTED:?}"
-    remount_read_write_if_possible "${LAST_MOUNTPOINT:?}" false && SYS_EXT_USABLE='true'
+    remount_read_write_if_possible "${LAST_MOUNTPOINT:?}" false && SYS_EXT_RW='true'
   fi
   if mount_partition_if_possible 'odm' "${SLOT_SUFFIX:+odm}${SLOT_SUFFIX-}${NL:?}odm${NL:?}"; then
     ODM_PATH="${LAST_MOUNTPOINT:?}"
     UNMOUNT_ODM="${LAST_PARTITION_MUST_BE_UNMOUNTED:?}"
-    remount_read_write_if_possible "${LAST_MOUNTPOINT:?}" false
+    #remount_read_write_if_possible "${LAST_MOUNTPOINT:?}" false && ODM_RW='true'
   fi
   readonly PRODUCT_PATH VENDOR_PATH SYS_EXT_PATH ODM_PATH
   export PRODUCT_PATH VENDOR_PATH SYS_EXT_PATH ODM_PATH
-  readonly PRODUCT_USABLE VENDOR_USABLE SYS_EXT_USABLE
-  export PRODUCT_USABLE VENDOR_USABLE SYS_EXT_USABLE
+  readonly PRODUCT_RW VENDOR_RW SYS_EXT_RW
+  export PRODUCT_RW VENDOR_RW SYS_EXT_RW ODM_RW
 
   _additional_data_mountpoint=''
   if test -n "${ANDROID_DATA-}" && test "${ANDROID_DATA:?}" != '/data'; then _additional_data_mountpoint="${ANDROID_DATA:?}"; fi
@@ -1343,6 +1370,8 @@ clean_previous_installations()
 
   if test "${SETUP_TYPE?}" = 'uninstall'; then
     ui_msg 'Uninstalling...'
+  else
+    ui_msg_empty_line
   fi
 
   test "${DRY_RUN:?}" -eq 0 || return
@@ -1353,7 +1382,9 @@ clean_previous_installations()
     ui_error "Something is wrong because '${SYS_PATH?}' is NOT really writable!!!" 30
   fi
 
-  _initial_free_space="$(get_free_disk_space_of_partition "${SYS_PATH:?}")" || _initial_free_space='-1'
+  if test "${SETUP_TYPE?}" != 'uninstall'; then
+    _initial_free_space="$(get_free_disk_space_of_partition "${SYS_PATH:?}")" || _initial_free_space='-1'
+  fi
 
   rm -f -- "${SYS_PATH:?}/etc/write-test-file.dat" || ui_error 'Failed to delete the test file'
 
@@ -1365,7 +1396,6 @@ clean_previous_installations()
   delete "${SYS_PATH:?}/etc/zips/${MODULE_ID:?}.prop"
 
   if test "${SETUP_TYPE?}" != 'uninstall'; then
-    ui_debug ''
     _wait_free_space_changes 5 "${_initial_free_space:?}" # Reclaiming free space may take some time
     ui_debug ''
   fi
@@ -1399,7 +1429,6 @@ prepare_installation()
 
   ui_msg 'Preparing installation...'
   _need_newline='false'
-  sleep 2> /dev/null '0.05' || : # Wait some time otherwise ui_debug may appear before the previous ui_msg
 
   if test "${API:?}" -ge 29; then # Android 10+
     ui_debug '  Processing ACCESS_BACKGROUND_LOCATION...'
@@ -1417,6 +1446,13 @@ prepare_installation()
   fi
 
   test "${_need_newline:?}" = 'false' || ui_debug ''
+
+  if test "${API}" -lt 23; then
+    delete_temp "files/etc/default-permissions"
+  fi
+  if test "${API:?}" -lt 21; then
+    delete_temp "files/etc/sysconfig"
+  fi
 
   if test "${PRIVAPP_DIRNAME:?}" != 'priv-app' && test -e "${TMP_PATH:?}/files/priv-app"; then
     ui_debug "  Merging priv-app folder with ${PRIVAPP_DIRNAME?} folder..."
@@ -1470,11 +1506,6 @@ prepare_installation()
       if test ! -f "${entry:?}"; then continue; fi
       set_perm 0 2000 0755 "${entry:?}"
     done
-  fi
-
-  if test -d "${TMP_PATH:?}/addon.d"; then
-    set_std_perm_recursive "${TMP_PATH:?}/addon.d"
-    find "${TMP_PATH:?}/addon.d" -type f -name '*.sh' -exec chmod 0755 '{}' '+' || ui_error 'Failed to chmod addon.d scripts'
   fi
 }
 
@@ -1654,9 +1685,9 @@ display_free_space()
     _free_space_auto="$(convert_bytes_to_human_readable_format "${2:?}")"
 
     if test "${_free_space_auto?}" != "${_free_space_mb?} MB"; then
-      ui_msg "Free space on ${1?}: ${_free_space_mb?} MB (${_free_space_auto?}) - usable: ${3?}"
+      ui_msg "Free space on ${1?}: ${_free_space_mb?} MB (${_free_space_auto?}) - writable: ${3?}"
     else
-      ui_msg "Free space on ${1?}: ${_free_space_mb?} MB - usable: ${3?}"
+      ui_msg "Free space on ${1?}: ${_free_space_mb?} MB - writable: ${3?}"
     fi
     return 0
   fi
@@ -1734,10 +1765,10 @@ verify_disk_space()
   _free_space_bytes="$(get_free_disk_space_of_partition "${1:?}")" || _free_space_bytes='-1'
   display_free_space "${1:?}" "${_free_space_bytes?}" 'true'
 
-  if test -n "${PRODUCT_PATH?}"; then display_free_space "${PRODUCT_PATH:?}" "$(get_free_disk_space_of_partition "${PRODUCT_PATH:?}" || :)" "${PRODUCT_USABLE:?}"; fi
-  if test -n "${VENDOR_PATH?}"; then display_free_space "${VENDOR_PATH:?}" "$(get_free_disk_space_of_partition "${VENDOR_PATH:?}" || :)" "${VENDOR_USABLE:?}"; fi
-  if test -n "${SYS_EXT_PATH?}"; then display_free_space "${SYS_EXT_PATH:?}" "$(get_free_disk_space_of_partition "${SYS_EXT_PATH:?}" || :)" "${SYS_EXT_USABLE:?}"; fi
-  if test -n "${ODM_PATH?}"; then display_free_space "${ODM_PATH:?}" "$(get_free_disk_space_of_partition "${ODM_PATH:?}" || :)" 'false'; fi
+  if test -n "${PRODUCT_PATH?}"; then display_free_space "${PRODUCT_PATH:?}" "$(get_free_disk_space_of_partition "${PRODUCT_PATH:?}" || :)" "${PRODUCT_RW:?}"; fi
+  if test -n "${VENDOR_PATH?}"; then display_free_space "${VENDOR_PATH:?}" "$(get_free_disk_space_of_partition "${VENDOR_PATH:?}" || :)" "${VENDOR_RW:?}"; fi
+  if test -n "${SYS_EXT_PATH?}"; then display_free_space "${SYS_EXT_PATH:?}" "$(get_free_disk_space_of_partition "${SYS_EXT_PATH:?}" || :)" "${SYS_EXT_RW:?}"; fi
+  if test -n "${ODM_PATH?}"; then display_free_space "${ODM_PATH:?}" "$(get_free_disk_space_of_partition "${ODM_PATH:?}" || :)" "${ODM_RW:?}"; fi
 
   if test "${_needed_space_bytes:?}" -ge 0 && test "${_free_space_bytes:?}" -ge 0; then
     : # OK
@@ -2163,27 +2194,7 @@ delete()
   for filename in "${@}"; do
     if test -e "${filename?}"; then
       ui_debug "Deleting '${filename?}'..."
-      rm -rf -- "${filename:?}" || ui_error 'Failed to delete files/folders' 103
-    fi
-  done
-}
-
-delete_recursive()
-{
-  for filename in "${@}"; do
-    if test -e "${filename?}"; then
-      ui_debug "Deleting '${filename?}'..."
-      rm -rf -- "${filename:?}" || ui_error 'Failed to delete files/folders' 103
-    fi
-  done
-}
-
-delete_recursive_wildcard()
-{
-  for filename in "${@}"; do
-    if test -e "${filename?}"; then
-      ui_debug "Deleting '${filename?}'..."
-      rm -rf -- "${filename:?}" || ui_error 'Failed to delete files/folders' 103
+      rm -rf -- "${filename:?}" || ui_error 'Failed to delete files/folders in delete()' 103
     fi
   done
 }
@@ -2192,8 +2203,8 @@ delete_temp()
 {
   for filename in "${@}"; do
     if test -e "${TMP_PATH:?}/${filename?}"; then
-      # ui_debug "Deleting '${TMP_PATH?}/${filename?}'..."
-      rm -rf -- "${TMP_PATH:?}/${filename:?}" || ui_error 'Failed to delete temp files/folders in delete_temp()' 103
+      #ui_debug "Deleting '${TMP_PATH?}/${filename?}'..."
+      rm -rf -- "${TMP_PATH:?}/${filename:?}" || ui_error 'Failed to delete files/folders in delete_temp()' 103
     fi
   done
 }
@@ -2209,7 +2220,7 @@ delete_if_sha256_match()
     for _hash in "${@}"; do
       if test "${_hash:?}" = "${_filehash:?}"; then
         ui_debug "Deleting '${_filename:?}'..."
-        rm -f -- "${_filename:?}" || ui_error 'Failed to delete file in delete_if_sha256_match()' 103
+        rm -f -- "${_filename:?}" || ui_error 'Failed to delete a file in delete_if_sha256_match()' 103
         return
       fi
     done
@@ -2565,7 +2576,7 @@ inputevent_initialize()
 
   INPUT_DEVICE_LIST=''
 
-  for _device in 'gpio-keys' 'gpio_keys' 'qpnp_pon' 's2mpg12-power-keys' 'sec_key' 'sec_touchkey' 'qwerty' 'qwerty2'; do
+  for _device in 'gpio-keys' 'gpio_keys' 'qpnp_pon' 'mtk-kpd' 's2mpg12-power-keys' 'sec_key' 'sec_touchkey' 'qwerty' 'qwerty2'; do
     if test "${IS_EMU:?}" != 'true'; then
       case "${_device:?}" in 'qwerty' | 'qwerty2') continue ;; *) ;; esac
     fi
@@ -2577,6 +2588,8 @@ inputevent_initialize()
 
     _parse_keylayout "${_device:?}"
   done
+
+  test -n "${INPUT_DEVICE_LIST?}" || return 1
 }
 
 input_device_listener_start()
@@ -2594,7 +2607,7 @@ input_device_listener_start()
   IFS="${NL:?}"
   set -f
   # shellcheck disable=SC2086 # Word splitting is intended
-  set -- ${INPUT_DEVICE_LIST:?} || ui_error "Failed expanding \$INPUT_DEVICE_LIST inside input_device_listener_start()"
+  set -- ${INPUT_DEVICE_LIST:?} || ui_error "Failed expanding \${INPUT_DEVICE_LIST} inside input_device_listener_start()"
   set +f
   IFS="${_backup_ifs?}"
 
@@ -2911,7 +2924,10 @@ _timeout_check()
   readonly TIMEOUT_CMD_IS_LEGACY_BUSYBOX
   export TIMEOUT_CMD_IS_LEGACY_BUSYBOX
 
-  if test "${DEBUG_LOG_ENABLED:?}" -eq 1 || test "${RECOVERY_OUTPUT:?}" = 'true'; then ui_debug "Timeout is legacy BusyBox: ${TIMEOUT_CMD_IS_LEGACY_BUSYBOX:-}"; fi
+  if test "${DEBUG_LOG_ENABLED:?}" -eq 1; then
+    ui_debug "Timeout is legacy BusyBox: ${TIMEOUT_CMD_IS_LEGACY_BUSYBOX:-}"
+    ui_debug ''
+  fi
 }
 
 _timeout_compat()
@@ -3151,11 +3167,11 @@ choose_inputevent()
 {
   local _key _status _last_key_pressed _key_desc _ret
 
-  test "${#}" -le 1 || ui_error "Key detection failed (input event) - invalid number of arguments"
+  test "${#}" -le 1 || ui_error "Key detection (input event) - too many arguments"
 
   input_device_listener_start || {
     ui_msg_empty_line
-    ui_warning "Key detection failed (input event)"
+    ui_warning "Key detection (input event) - listener startup failed"
     ui_msg_empty_line
     return 1
   }
@@ -3174,7 +3190,7 @@ choose_inputevent()
         return 0
       fi
 
-      ui_warning "Key detection failed (input event) - get, status code: ${_status?}"
+      ui_warning "Key detection (input event) - event get failed, status code: ${_status?}"
       return 1
     }
 
@@ -3182,7 +3198,7 @@ choose_inputevent()
       INPUT_EVENT_SIZE="$(_detect_input_event_size "${INPUT_EVENT_CURRENT?}")" || {
         _status="${?}"
         input_device_listener_stop
-        ui_error "Key detection failed (input event) - size check, status code: ${_status?}"
+        ui_error "Key detection (input event) - size check failed, status code: ${_status?}"
       }
       if test "${INPUT_EVENT_SIZE:?}" -ne 24; then INPUT_EVENT_START_OFFSET="$((INPUT_EVENT_START_OFFSET - 24 + INPUT_EVENT_SIZE))"; fi
     fi
@@ -3196,7 +3212,7 @@ choose_inputevent()
       115) continue ;; # We got an unsupported event type or action (ignored)
       *)               # Event parsing failed (fail)
         input_device_listener_stop
-        ui_error "Key detection failed (input event) - parse, status code: ${_status?}"
+        ui_error "Key detection (input event) - event parse failed, status code: ${_status?}"
         ;;
     esac
 
@@ -3257,7 +3273,7 @@ choose_inputevent()
   case "${_key_desc?}" in
     '+') _ret=3 ;;
     '-') _ret=2 ;;
-    *) test "${KEY_TEST_ONLY:?}" -eq 1 || ui_error "Key detection failed (input event) - key, key code: ${_key?}" ;;
+    *) test "${KEY_TEST_ONLY:?}" -eq 1 || ui_error "Key detection (input event) - wrong key received, key code: ${_key?}" ;;
   esac
 
   ui_msg_empty_line
@@ -3310,12 +3326,11 @@ _live_setup_initialize()
     fi
   fi
 
-  ui_msg_empty_line
   ui_msg "Using: ${INPUT_TYPE?}"
   ui_msg_empty_line
 
   case "${INPUT_TYPE?}" in
-    'input event') inputevent_initialize ;;
+    'input event') inputevent_initialize || ui_warning "Key detection (input event) - initialization failed" ;;
     'keycheck') _keycheck_initialize || ui_error 'Failed to initialize keycheck' ;;
     'read') ;;
     *) ui_error "Invalid input handling selected: ${INPUT_TYPE?}" ;;
