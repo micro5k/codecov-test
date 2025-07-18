@@ -1432,16 +1432,43 @@ _move_app_into_subfolder()
   mv -f -- "${1:?}" "${_path_without_ext:?}/" || ui_error "Failed to move the file '${1?}' to folder '${_path_without_ext?}/'"
 }
 
-replace_permission_placeholders()
+_replace_perm_placeholders_in_file()
 {
-  if test -e "${TMP_PATH:?}/files/etc/${1:?}"; then
+  local _repl
+
+  if test "${1:?}" = 'permissions'; then
+    _repl="<permission name=\"android.permission.${3:?}\" />"
+  elif test "${1:?}" = 'default-permissions'; then
+    if test "${4?}" = 'true'; then
+      _repl="<permission name=\"android.permission.${3:?}\" fixed=\"false\" whitelisted=\"true\" />"
+    else
+      _repl="<permission name=\"android.permission.${3:?}\" fixed=\"false\" />"
+    fi
+  else
+    return 10
+  fi
+
+  sed -i -e "s#<!-- %${3:?}% -->#${_repl:?}#g" -- "${2:?}"
+}
+
+_replace_perm_helper()
+{
+  if test -d "${TMP_PATH:?}/files/etc/${1:?}"; then
     {
-      grep -l -r -F -e "${2:?}" -- "${TMP_PATH:?}/files/etc/${1:?}" || true
+      grep -l -r -F -e "%${2:?}%" -- "${TMP_PATH:?}/files/etc/${1:?}" || :
     } | while IFS='' read -r file_name; do
       ui_debug "    ${file_name#"${TMP_PATH}/files/"}"
-      replace_line_in_file "${file_name:?}" "${2:?}" "${3:?}"
+      _replace_perm_placeholders_in_file "${1:?}" "${file_name:?}" "${2:?}" "${3?}" || ui_warning "Failed to replace '${2?}' in '${file_name?}'"
     done || ui_warning "Failed to replace '${2?}' in 'files/etc/${1?}'"
   fi
+}
+
+replace_permission_placeholders()
+{
+  ui_debug "  Processing ${1?}..."
+  _replace_perm_helper 'permissions' "${1:?}" "${2-}"
+  _replace_perm_helper 'default-permissions' "${1:?}" "${2-}"
+  ui_debug '  Done'
 }
 
 prepare_installation()
@@ -1452,17 +1479,12 @@ prepare_installation()
   _need_newline='false'
 
   if test "${API:?}" -ge 29; then # Android 10+
-    ui_debug '  Processing ACCESS_BACKGROUND_LOCATION...'
-    replace_permission_placeholders 'default-permissions' '%ACCESS_BACKGROUND_LOCATION%' '        <permission name="android.permission.ACCESS_BACKGROUND_LOCATION" fixed="false" whitelisted="true" />'
-    ui_debug '  Done'
+    replace_permission_placeholders 'ACCESS_BACKGROUND_LOCATION' 'true'
     _need_newline='true'
   fi
 
   if test "${FAKE_SIGN_PERMISSION:?}" = 'true'; then
-    ui_debug '  Processing FAKE_PACKAGE_SIGNATURE...'
-    replace_permission_placeholders 'permissions' '%FAKE_PACKAGE_SIGNATURE%' '        <permission name="android.permission.FAKE_PACKAGE_SIGNATURE" />'
-    replace_permission_placeholders 'default-permissions' '%FAKE_PACKAGE_SIGNATURE%' '        <permission name="android.permission.FAKE_PACKAGE_SIGNATURE" fixed="false" />'
-    ui_debug '  Done'
+    replace_permission_placeholders 'FAKE_PACKAGE_SIGNATURE'
     _need_newline='true'
   fi
 
