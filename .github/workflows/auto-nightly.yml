@@ -10,7 +10,7 @@ on:
       - "main"
   schedule:
     # At 03:00 AM, every 6 days (UTC)
-    - cron: "50 14 * * *"
+    - cron: "0 3 */6 * *"
 concurrency:
   group: "${{ github.repository_id }}-${{ github.workflow }}"
   cancel-in-progress: true
@@ -144,6 +144,8 @@ jobs:
     if: "${{ github.event_name == 'schedule' }}"
 
     steps:
+      - name: "Checkout sources"
+        uses: actions/checkout@v4
       - name: "Read cache"
         uses: actions/cache@v4
         with:
