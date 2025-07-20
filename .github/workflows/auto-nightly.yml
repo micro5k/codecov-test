@@ -10,7 +10,7 @@ on:
       - "main"
   schedule:
     # At 03:00 AM, every 6 days (UTC)
-    - cron: "10 15 * * *"
+    - cron: "30 15 * * *"
 concurrency:
   group: "${{ github.repository_id }}-${{ github.workflow }}"
   cancel-in-progress: true
