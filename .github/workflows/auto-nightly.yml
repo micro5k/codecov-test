@@ -31,8 +31,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: "cache"
-          key: "build-${{ hashFiles('${{ github.workspace }}/conf-2.sh') }}"
+          key: "build-${{ hashFiles('/conf-2.sh') }}"
           restore-keys: "build-"
+          enableCrossOsArchive: true
       - name: "Build nightly"
         id: "build"
         shell: bash
