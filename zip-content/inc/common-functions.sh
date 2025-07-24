@@ -396,7 +396,7 @@ is_mounted_read_write()
   local _mount_info
   _mount_info="$(_get_mount_info "${1:?}")" || ui_error "is_mounted_read_write has failed for '${1?}'"
 
-  # To avoid "write: Broken pipe" with "grep -q" / "grep -m 1" use "echo" instead of "printf" and ignore its exit code
+  # To avoid "write error: Broken pipe" when a string is piped to "grep -q" or "grep -m 1" we use "echo" instead of "printf" and we ignore the exit code of echo
   if {
     echo "${_mount_info:?}" || :
   } | grep -q -e '[[:blank:],(]rw[),[:blank:]]'; then
@@ -1479,13 +1479,17 @@ prepare_installation()
   _need_newline='false'
 
   if test "${API:?}" -ge 29; then # Android 10+
-    replace_permission_placeholders 'ACCESS_BACKGROUND_LOCATION' 'true'
     _need_newline='true'
+    replace_permission_placeholders 'ACCESS_BACKGROUND_LOCATION' 'true'
+
+    if test "${API:?}" -ge 33; then # Android 13+
+      replace_permission_placeholders 'POST_NOTIFICATIONS'
+    fi
   fi
 
   if test "${FAKE_SIGN_PERMISSION:?}" = 'true'; then
-    replace_permission_placeholders 'FAKE_PACKAGE_SIGNATURE'
     _need_newline='true'
+    replace_permission_placeholders 'FAKE_PACKAGE_SIGNATURE'
   fi
 
   test "${_need_newline:?}" = 'false' || ui_debug ''
