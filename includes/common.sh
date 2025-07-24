@@ -7,7 +7,7 @@
 
 if test "${A5K_FUNCTIONS_INCLUDED:-false}" = 'false'; then readonly A5K_FUNCTIONS_INCLUDED='true'; fi
 
-#export DL_DEBUG=true
+##export DL_DEBUG=true
 export LANG='en_US.UTF-8'
 export TZ='UTC'
 
