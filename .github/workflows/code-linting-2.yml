@@ -22,6 +22,7 @@ jobs:
       - name: "Verify token"
         shell: bash
         run: |
+          # Verifying token...
           test -n '${{ secrets.CODACY_PROJECT_TOKEN }}' || exit 3
       - name: "Checkout sources"
         uses: actions/checkout@v4
@@ -50,10 +51,14 @@ jobs:
 
   sonarqube:
     name: "SonarQube"
-    if: "${{ false }}"
     runs-on: ubuntu-latest
 
     steps:
+      - name: "Verify token"
+        shell: bash
+        run: |
+          # Verifying token...
+          test -n '${{ secrets.SONAR_TOKEN }}' || exit 3
       - name: "Checkout sources"
         uses: actions/checkout@v4
         with:
