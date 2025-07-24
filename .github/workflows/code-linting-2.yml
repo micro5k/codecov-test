@@ -11,7 +11,6 @@ on:
 jobs:
   codacy:
     name: "Codacy"
-    if: "${{ secrets.CODACY_PROJECT_TOKEN != '' }}"
     runs-on: ubuntu-latest
     concurrency:
       group: "${{ github.repository_id }}-${{ github.workflow }}-codacy"
@@ -20,6 +19,10 @@ jobs:
       security-events: write
 
     steps:
+      - name: "Verify token"
+        shell: bash
+        run: |
+          test -n '${{ secrets.CODACY_PROJECT_TOKEN }}' || exit 3
       - name: "Checkout sources"
         uses: actions/checkout@v4
       - name: "Codacy analysis"
