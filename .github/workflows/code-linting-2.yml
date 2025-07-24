@@ -11,7 +11,7 @@ on:
 jobs:
   codacy:
     name: "Codacy"
-    if: "${{ github.repository_owner == 'micro5k' }}"
+    if: "${{ secrets.CODACY_PROJECT_TOKEN != '' }}"
     runs-on: ubuntu-latest
     concurrency:
       group: "${{ github.repository_id }}-${{ github.workflow }}-codacy"
@@ -47,7 +47,7 @@ jobs:
 
   sonarqube:
     name: "SonarQube"
-    if: "${{ github.repository_owner == 'micro5k' }}"
+    if: "${{ false }}"
     runs-on: ubuntu-latest
 
     steps:
