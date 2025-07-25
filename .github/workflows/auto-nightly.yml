@@ -42,8 +42,6 @@ jobs:
         shell: bash
         run: |
           # Building nightly...
-          echo "_${{ github.event.repository.default_branch }}_"
-          echo "_${GITHUB_REF_NAME-}_"
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
           BUILD_TYPE='full' '${{ github.workspace }}/build.sh'
       - name: "ZIP info"
