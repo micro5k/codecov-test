@@ -7,7 +7,6 @@
 
 if test "${A5K_FUNCTIONS_INCLUDED:-false}" = 'false'; then readonly A5K_FUNCTIONS_INCLUDED='true'; fi
 
-#export DL_DEBUG=true
 export LANG='en_US.UTF-8'
 export TZ='UTC'
 
@@ -412,13 +411,13 @@ _parse_webpage_and_get_url()
   if test ! -e "${MAIN_DIR:?}/cache/temp/headers"; then mkdir -p "${MAIN_DIR:?}/cache/temp/headers" || return "${?}"; fi
 
   {
-    _parsed_code="$("${WGET_CMD:?}" -q -S -O '-' "${@}" -- "${_url:?}")" 2> "${_headers_file:?}" || _status="${?}"
+    _parsed_code="$("${WGET_CMD:?}" -q -S -O '-' "${@}" -- "${_url:?}" 2> "${_headers_file:?}")" || _status="${?}"
 
     # shellcheck disable=SC3040 # Ignore: In POSIX sh, set option pipefail is undefined
     {
-      # IMPORTANT: We have to avoid "write error: Broken pipe" when a string is piped to "grep -q" or "grep -m 1"
+      # IMPORTANT: We have to avoid "printf: write error: Broken pipe" when a string is piped to "grep -q" or "grep -m 1"
       test "${USING_PIPEFAIL:-false}" = 'false' || set +o pipefail
-      _parsed_code="$(printf '%s\n' "${_parsed_code?}" | grep -o -m 1 -e "${_search_pattern:?}")" || _status="${?}"
+      _parsed_code="$(printf 2> /dev/null '%s\n' "${_parsed_code?}" | grep -o -m 1 -e "${_search_pattern:?}")" || _status="${?}"
       test "${USING_PIPEFAIL:-false}" = 'false' || set -o pipefail
     }
 
@@ -439,9 +438,7 @@ _parse_webpage_and_get_url()
     fi
   }
 
-stat 1>&2 "${_headers_file:?}" || echo 1>&2 "__err1__"
   test -s "${_headers_file:?}" || rm -f "${_headers_file:?}" || return "${?}" # Delete if empty
-stat 1>&2 "${_headers_file:?}" || echo 1>&2 "__err2__"
   _parse_and_store_all_cookies "${_domain:?}" 0< "${_headers_file:?}" || {
     ui_error_msg "Header parsing failed, error code => ${?}"
     return 12
