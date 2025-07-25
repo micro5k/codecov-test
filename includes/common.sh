@@ -7,7 +7,7 @@
 
 if test "${A5K_FUNCTIONS_INCLUDED:-false}" = 'false'; then readonly A5K_FUNCTIONS_INCLUDED='true'; fi
 
-##export DL_DEBUG=true
+#export DL_DEBUG=true
 export LANG='en_US.UTF-8'
 export TZ='UTC'
 
@@ -411,7 +411,6 @@ _parse_webpage_and_get_url()
   _headers_file="${MAIN_DIR:?}/cache/temp/headers/${_domain:?}.dat"
   if test ! -e "${MAIN_DIR:?}/cache/temp/headers"; then mkdir -p "${MAIN_DIR:?}/cache/temp/headers" || return "${?}"; fi
 
-set -x
   {
     _parsed_code="$("${WGET_CMD:?}" -q -S -O '-' "${@}" -- "${_url:?}")" 2> "${_headers_file:?}" || _status="${?}"
 
@@ -439,8 +438,8 @@ set -x
       return 1
     fi
   }
-set +x
 
+  test -s "${_headers_file:?}" || rm -f "${_headers_file:?}" || : # Delete if empty
   _parse_and_store_all_cookies "${_domain:?}" 0< "${_headers_file:?}" || {
     ui_error_msg "Header parsing failed, error code => ${?}"
     return 2
