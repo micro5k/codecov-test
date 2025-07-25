@@ -423,7 +423,7 @@ _parse_webpage_and_get_url()
     }
 
     if test "${_status:?}" -eq 0; then
-      test -n "${_parsed_code?}" || return 3
+      test -n "${_parsed_code?}" || return 10
       _parsed_url="$(printf '%s\n' "${_parsed_code:?}" | grep -o -e 'href=".*' | cut -d '"' -f '2' -s | sed -e 's|&amp;|\&|g')" || _status="${?}"
       if test "${DL_DEBUG:?}" = 'true'; then
         ui_debug "Parsed url: ${_parsed_url?}"
@@ -435,14 +435,16 @@ _parse_webpage_and_get_url()
       if test "${DL_DEBUG:?}" = 'true'; then
         ui_error_msg "Webpage parsing failed, error code => ${_status?}"
       fi
-      return 1
+      return 11
     fi
   }
 
-  test -s "${_headers_file:?}" || rm -f "${_headers_file:?}" || : # Delete if empty
+stat 1>&2 "${_headers_file:?}" || echo 1>&2 "__err1__"
+  test -s "${_headers_file:?}" || rm -f "${_headers_file:?}" || return "${?}" # Delete if empty
+stat 1>&2 "${_headers_file:?}" || echo 1>&2 "__err2__"
   _parse_and_store_all_cookies "${_domain:?}" 0< "${_headers_file:?}" || {
     ui_error_msg "Header parsing failed, error code => ${?}"
-    return 2
+    return 12
   }
   rm -f "${_headers_file:?}" || return "${?}"
 
