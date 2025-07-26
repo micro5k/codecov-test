@@ -10,7 +10,7 @@ on:
       - "**"
   schedule:
     # At 03:00 AM, every 6 days (UTC)
-    - cron: "*/5 * * * *"
+    - cron: "* * * * *"
 concurrency:
   group: "${{ github.repository_id }}-${{ github.workflow }}"
   cancel-in-progress: true
@@ -152,9 +152,10 @@ jobs:
           sparse-checkout: |
             conf-2.sh
           sparse-checkout-cone-mode: false
-      - name: "Read cache"
+      - name: "Ping cache"
         uses: actions/cache@v4
         with:
-          path: "cache/build"
           key: "build-${{ hashFiles('conf-2.sh') }}"
+          path: "cache/build"
           enableCrossOsArchive: true
+          lookup-only: true
