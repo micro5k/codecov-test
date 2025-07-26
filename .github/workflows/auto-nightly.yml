@@ -48,11 +48,14 @@ jobs:
         run: |
           # Building nightly...
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
+          BUILD_TYPE='full' '${{ github.workspace }}/build.sh'
       - name: "Attest build provenance"
         id: "attest"
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip"
+          subject-checksums: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip.sha256"
+          #subject-path: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip"
+          show-summary: false
       - name: "ZIP info"
         run: |
           # Retrieve informations...
