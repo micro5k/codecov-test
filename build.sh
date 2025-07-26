@@ -177,11 +177,13 @@ FILENAME_START="${MODULE_ID:?}-${MODULE_VER:?}-"
 FILENAME_MIDDLE="${FILENAME_COMMIT_ID:?}"
 FILENAME_END="-${BUILD_TYPE:?}-by-${MODULE_AUTHOR:?}"
 
+echo "_${GITHUB_REPOSITORY_DEFAULT_BRANCH-}_"
+
 if test "${CI:-false}" != 'false'; then
   if test -n "${CI_COMMIT_BRANCH-}" && test "${CI_COMMIT_BRANCH:?}" != "${CI_DEFAULT_BRANCH:-unknown}"; then
     FILENAME_MIDDLE="${FILENAME_MIDDLE:?}-[${CI_COMMIT_BRANCH:?}]" # GitLab
   fi
-  if test "${GITHUB_REF_TYPE-}" = 'branch' && test -n "${GITHUB_REF_NAME-}" && test "${GITHUB_REF_NAME:?}" != "main" && test "${GITHUB_REF_NAME:?}" != "master"; then
+  if test "${GITHUB_REF_TYPE-}" = 'branch' && test -n "${GITHUB_REF_NAME-}" && test "${GITHUB_REF_NAME:?}" != "${GITHUB_REPOSITORY_DEFAULT_BRANCH:-main}"; then
     FILENAME_MIDDLE="${FILENAME_MIDDLE:?}-[${GITHUB_REF_NAME:?}]" # GitHub
   fi
   if test "${CI_PROJECT_NAMESPACE:-${GITHUB_REPOSITORY_OWNER:-unknown}}" != 'micro''5k'; then
