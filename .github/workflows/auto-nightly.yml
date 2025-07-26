@@ -48,6 +48,7 @@ jobs:
         run: |
           # Building...
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
+          printf 'ZIP_BUILD_TYPE_SUPPORTED=%s\n' "false" >> "${GITHUB_OUTPUT?}"
       - name: "Attest build provenance"
         id: "attest"
         uses: actions/attest-build-provenance@v2
