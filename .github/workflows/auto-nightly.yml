@@ -53,8 +53,7 @@ jobs:
         id: "attest"
         uses: actions/attest-build-provenance@v2
         with:
-          subject-checksums: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip.sha256"
-          #subject-path: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip"
+          subject-path: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip"
           show-summary: false
       - name: "ZIP info"
         run: |
