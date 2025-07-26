@@ -177,8 +177,6 @@ FILENAME_START="${MODULE_ID:?}-${MODULE_VER:?}-"
 FILENAME_MIDDLE="${FILENAME_COMMIT_ID:?}"
 FILENAME_END="-${BUILD_TYPE:?}-by-${MODULE_AUTHOR:?}"
 
-echo "_${GITHUB_REPOSITORY_DEFAULT_BRANCH-}_"
-
 if test "${CI:-false}" != 'false'; then
   if test -n "${CI_COMMIT_BRANCH-}" && test "${CI_COMMIT_BRANCH:?}" != "${CI_DEFAULT_BRANCH:-unknown}"; then
     FILENAME_MIDDLE="${FILENAME_MIDDLE:?}-[${CI_COMMIT_BRANCH:?}]" # GitLab
