@@ -46,7 +46,7 @@ jobs:
         run: |
           # Building nightly...
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
-          BUILD_TYPE='full' '${{ github.workspace }}/build.sh'
+          #BUILD_TYPE='full' '${{ github.workspace }}/build.sh'
       - name: "ZIP info"
         run: |
           # Retrieve informations...
@@ -140,6 +140,10 @@ jobs:
           if-no-files-found: "error"
           retention-days: 10
           compression-level: 0
+      - name: "Generate artifact attestation"
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip"
 
   keep-cache:
     name: "Keep cache alive"
