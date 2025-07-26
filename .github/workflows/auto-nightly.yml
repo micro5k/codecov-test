@@ -10,7 +10,7 @@ on:
       - "**"
   schedule:
     # At 03:00 AM, every 6 days (UTC)
-    - cron: "* * * * *"
+    - cron: "0 3 */6 * *"
 concurrency:
   group: "${{ github.repository_id }}-${{ github.workflow }}"
   cancel-in-progress: true
@@ -33,17 +33,15 @@ jobs:
       - name: "Prepare cache"
         uses: actions/cache@v4
         with:
-          path: "cache/build"
           key: "build-${{ hashFiles('conf-2.sh') }}"
           restore-keys: "build-"
+          path: "cache/build"
           enableCrossOsArchive: true
       - name: "Build nightly"
         id: "build"
         shell: bash
         run: |
           # Building nightly...
-          echo "_${GITHUB_REPOSITORY_DEFAULT_BRANCH}_"
-          echo "_${GITHUB_EVENT_REPOSITORY_DEFAULT_BRANCH}_"
           BUILD_TYPE='oss' '${{ github.workspace }}/build.sh'
           BUILD_TYPE='full' '${{ github.workspace }}/build.sh'
       - name: "ZIP info"
@@ -134,7 +132,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: "${{ steps.build.outputs.ZIP_BUILD_TYPE_SUPPORTED == 'true' }}"
         with:
-          name: "${{ github.event.repository.name }}-${{ github.ref_name }}-g${{ steps.build.outputs.ZIP_SHORT_COMMIT_ID }}-${{ steps.build.outputs.ZIP_BUILD_TYPE }} (extract it)"
+          name: "${{ github.event.repository.name }} ${{ github.ref_name }} g${{ steps.build.outputs.ZIP_SHORT_COMMIT_ID }} ${{ steps.build.outputs.ZIP_BUILD_TYPE }} (extract it)"
           path: "${{ steps.build.outputs.ZIP_FOLDER }}/*.zip*"
           if-no-files-found: "error"
           retention-days: 10
