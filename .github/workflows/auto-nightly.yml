@@ -24,7 +24,8 @@ jobs:
     if: "${{ github.event_name == 'push' && github.ref_type == 'branch' }}"
     permissions:
       contents: write # Needed to create a tag
-      id-token: write
+      id-token: write # Needed to generate artifact attestation
+      attestations: read # Needed to generate artifact attestation
 
     steps:
       - name: "Checkout sources"
