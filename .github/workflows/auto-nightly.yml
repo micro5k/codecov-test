@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "${{ github.event_name == 'push' && github.ref_type == 'branch' }}"
     permissions:
-      contents: read # Needed to create a tag
+      contents: write # Needed to delete a release and to modify a tag
       id-token: write # Needed to generate artifact attestation
       attestations: write # Needed to generate artifact attestation
 
