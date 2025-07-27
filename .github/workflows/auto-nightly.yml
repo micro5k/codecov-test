@@ -83,10 +83,10 @@ jobs:
         id: "nightly-logic"
         shell: bash
         run: |
-          # Do we need to publish the nightly build?
+          # Nightly logic...
           UPDATE_TAG='false'
           CREATE_RELEASE='false'
-          if '${{ github.ref_name == github.event.repository.default_branch && github.run_attempt == '1' && steps.build.outputs.ZIP_IS_ALPHA == 'true' }}"'; then
+          if '${{ github.ref_name == github.event.repository.default_branch && github.run_attempt == '1' && steps.build.outputs.ZIP_IS_ALPHA == 'true' }}'; then
             UPDATE_TAG='true'
           fi
           if '${{ github.ref_name == github.event.repository.default_branch && github.run_attempt == '1' && steps.build.outputs.ZIP_IS_ALPHA == 'true' && steps.build.outputs.ZIP_BUILD_TYPE_SUPPORTED == 'true' }}'; then
