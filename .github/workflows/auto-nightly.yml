@@ -138,7 +138,19 @@ jobs:
             if(response && response.status === 200) {
               console.log('Nightly tag updated.');
             } else if(response && response.status === 422 && response.message === 'Reference does not exist') {
-              throw new Error('Reference does not exist');
+              const responseCreate = await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'refs/tags/nightly',
+                sha: context.sha
+              }).catch(responseCreate => responseCreate);
+              if(responseCreate && responseCreate.status === 201) {
+                console.log('Nightly tag created.');
+              } else  {
+                let errorMsg = 'createRef failed';
+                if(responseCreate && responseCreate.status && responseCreate.message) errorMsg += ' with error ' + responseCreate.status + ' (' + responseCreate.message + ')';
+                throw new Error(errorMsg);
+              }
             } else {
               let errorMsg = 'updateRef failed';
               if(response && response.status && response.message) errorMsg += ' with error ' + response.status + ' (' + response.message + ')';
