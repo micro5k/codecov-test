@@ -15,6 +15,7 @@ jobs:
   codacy:
     name: "Codacy"
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: "${{ github.event_name == 'push' }}"
     concurrency:
       group: "${{ github.repository_id }}-${{ github.workflow }}-codacy"
@@ -32,6 +33,7 @@ jobs:
         uses: actions/checkout@v4
       - name: "Codacy analysis"
         uses: codacy/codacy-analysis-cli-action@v4
+        timeout-minutes: 10
         with:
           project-token: "${{ secrets.CODACY_PROJECT_TOKEN }}"
           #verbose: true
@@ -56,6 +58,7 @@ jobs:
   sonarqube:
     name: "SonarQube"
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: "${{ github.event_name == 'push' }}"
 
     steps:
@@ -70,5 +73,6 @@ jobs:
           fetch-depth: "0" # Shallow clones should be disabled for a better relevancy of analysis
       - name: "SonarQube scan"
         uses: SonarSource/sonarqube-scan-action@v5
+        timeout-minutes: 10
         env:
           SONAR_TOKEN: "${{ secrets.SONAR_TOKEN }}"
