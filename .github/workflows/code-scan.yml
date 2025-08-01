@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: "Checkout sources"
         uses: actions/checkout@v4
-      - name: "Verify the dependency graph "
+      - name: "Verify the dependency graph"
         uses: actions/github-script@v7
         timeout-minutes: 5
         with:
@@ -36,7 +36,7 @@ jobs:
               repo: context.repo.repo,
             }).catch(response => response);
             if(response && response.status === 200) {
-              console.log('Succeeded.');
+              console.log('The Dependency graph is enabled.');
             } else {
               let errorMsg = 'exportSbom failed';
               if(response && response.status && response.message) errorMsg += ' with error ' + response.status + ' (' + response.message + ')';
