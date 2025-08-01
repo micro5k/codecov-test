@@ -31,14 +31,14 @@ jobs:
           retries: 3
           script: |
             /* jshint esversion: 6 */
-            const response = await github.rest.dependency-graph.sbom({
+            const response = await github.rest.dependencyGraph.exportSbom({
               owner: context.repo.owner,
               repo: context.repo.repo,
             }).catch(response => response);
             if(response && response.status === 200) {
               console.log('Succeeded.');
             } else {
-              let errorMsg = 'enableWorkflow failed';
+              let errorMsg = 'exportSbom failed';
               if(response && response.status && response.message) errorMsg += ' with error ' + response.status + ' (' + response.message + ')';
               throw new Error(errorMsg);
             }
