@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: "Checkout sources"
         uses: actions/checkout@v4
-      - name: "Verify the dependency graph"
+      - name: "Verify the dependency graph "
         uses: actions/github-script@v7
         timeout-minutes: 5
         with:
