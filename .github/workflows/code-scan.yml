@@ -13,49 +13,8 @@ on:
     - cron: "0 5 */365 1 *"
 
 jobs:
-  dependency-submission:
-    name: "Dependency submission"
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    if: "${{ github.event_name == 'push' }}"
-    permissions:
-      contents: write
-
-    steps:
-      - name: "Checkout sources"
-        uses: actions/checkout@v4
-      - name: "Verify the dependency graph"
-        uses: actions/github-script@v7
-        timeout-minutes: 5
-        with:
-          retries: 3
-          script: |
-            /* jshint esversion: 6 */
-            const response = await github.rest.dependencyGraph.exportSbom({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            }).catch(response => response);
-            if(response && response.status === 200) {
-              console.log('The Dependency graph is enabled.');
-            } else {
-              let errorMsg = 'exportSbom failed';
-              if(response && response.status && response.message) errorMsg += ' with error ' + response.status + ' (' + response.message + ')';
-              throw new Error(errorMsg);
-            }
-      - name: "Setup Java"
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: "17"
-      - name: "Generate and submit dependency graph"
-        uses: gradle/actions/dependency-submission@v4
-        with:
-          cache-read-only: true
-          dependency-graph: "generate-and-submit"
-          validate-wrappers: true
-
-  verify-tokens:
-    name: "Verify tokens"
+  pre-requisites:
+    name: "Pre-requisites"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: "${{ github.event_name == 'push' }}"
@@ -75,12 +34,35 @@ jobs:
           if test -n '${{ secrets.SONAR_TOKEN }}'; then token_set='true'; else token_set='false'; fi
           printf 'SONAR_TOKEN_SET=%s\n' "${token_set:?}" 1>> "${GITHUB_OUTPUT?}"
 
+  dependency-submission:
+    name: "Dependency submission"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: "${{ github.event_name == 'push' }}"
+    permissions:
+      contents: write
+
+    steps:
+      - name: "Checkout sources"
+        uses: actions/checkout@v4
+      - name: "Setup Java"
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+      - name: "Generate and submit dependency graph"
+        uses: gradle/actions/dependency-submission@v4
+        with:
+          cache-read-only: true
+          dependency-graph: "generate-and-submit"
+          validate-wrappers: true
+
   codacy:
     name: "Codacy"
-    needs: [verify-tokens]
+    needs: [pre-requisites]
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: "${{ github.event_name == 'push' && needs.verify-tokens.outputs.codacy-token-set == 'true' }}"
+    if: "${{ github.event_name == 'push' && needs.pre-requisites.outputs.codacy-token-set == 'true' }}"
     concurrency:
       group: "${{ github.repository_id }}-${{ github.workflow }}-codacy"
       cancel-in-progress: false
@@ -116,10 +98,10 @@ jobs:
 
   sonarqube:
     name: "SonarQube"
-    needs: [verify-tokens]
+    needs: [pre-requisites]
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: "${{ github.event_name == 'push' && needs.verify-tokens.outputs.sonar-token-set == 'true' }}"
+    if: "${{ github.event_name == 'push' && needs.pre-requisites.outputs.sonar-token-set == 'true' }}"
 
     steps:
       - name: "Checkout sources"
