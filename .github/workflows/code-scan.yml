@@ -33,6 +33,24 @@ jobs:
           # SonarQube
           if test -n '${{ secrets.SONAR_TOKEN }}'; then token_set='true'; else token_set='false'; fi
           printf 'SONAR_TOKEN_SET=%s\n' "${token_set:?}" 1>> "${GITHUB_OUTPUT?}"
+      - name: "Verify the dependency graph"
+        uses: actions/github-script@v7
+        timeout-minutes: 5
+        with:
+          retries: 3
+          script: |
+            /* jshint esversion: 6 */
+            const response = await github.rest.dependencyGraph.exportSbom({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            }).catch(response => response);
+            if(response && response.status === 200) {
+              console.log('The dependency graph is enabled.');
+            } else {
+              let errorMsg = 'exportSbom failed';
+              if(response && response.status && response.message) errorMsg += ' with error ' + response.status + ' (' + response.message + ')';
+              throw new Error(errorMsg);
+            }
 
   dependency-submission:
     name: "Dependency submission"
