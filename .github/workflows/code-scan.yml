@@ -49,10 +49,12 @@ jobs:
             if(response && response.status === 200) {
               console.log('The dependency graph is enabled.');
               return true;
+            } else if(response && response.status === 404) {
+              console.error('::error::The dependency graph is disabled.');
             } else {
               let errorMsg = 'exportSbom failed';
               if(response && response.status && response.message) errorMsg += ' with error ' + response.status + ' (' + response.message + ')';
-              //throw new Error(errorMsg);
+              throw new Error(errorMsg);
             }
             return false;
 
